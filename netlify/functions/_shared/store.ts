@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { defaultKids, defaultTracker } from "./seed";
 import type { KidsData, TrackerData } from "./types";
@@ -7,22 +8,46 @@ import type { KidsData, TrackerData } from "./types";
 const TRACKER_KEY = "tracker";
 const KIDS_KEY = "kids";
 
-const localDir = path.join(process.cwd(), "data");
-
-function useLocalFallback(): boolean {
-  return (
-    process.env.USE_LOCAL_STORE === "1" ||
-    (!process.env.NETLIFY && !process.env.NETLIFY_DEV && !process.env.CONTEXT)
+/** True on Netlify production / deploy previews / `netlify dev` with Blobs. */
+function isNetlifyRuntime(): boolean {
+  return Boolean(
+    process.env.NETLIFY ||
+      process.env.CONTEXT ||
+      process.env.NETLIFY_BLOBS_CONTEXT ||
+      process.env.NETLIFY_DEV,
   );
 }
 
+function useFileStore(): boolean {
+  // Force file store only for explicit local-dev flag, and never on Netlify.
+  if (isNetlifyRuntime() && process.env.USE_LOCAL_STORE !== "1") {
+    return false;
+  }
+  return (
+    process.env.USE_LOCAL_STORE === "1" ||
+    !isNetlifyRuntime()
+  );
+}
+
+function localDir(): string {
+  // Lambda / Netlify functions cannot write under /var/task — use /tmp there.
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME || process.cwd().startsWith("/var/task")) {
+    return path.join(os.tmpdir(), "kids-mahaber-data");
+  }
+  return path.join(process.cwd(), "data");
+}
+
+function store() {
+  return getStore({ name: "kids-mahaber", consistency: "strong" });
+}
+
 async function ensureLocalDir() {
-  await mkdir(localDir, { recursive: true });
+  await mkdir(localDir(), { recursive: true });
 }
 
 async function localGet<T>(key: string): Promise<T | null> {
   try {
-    const raw = await readFile(path.join(localDir, `${key}.json`), "utf8");
+    const raw = await readFile(path.join(localDir(), `${key}.json`), "utf8");
     return JSON.parse(raw) as T;
   } catch {
     return null;
@@ -32,54 +57,42 @@ async function localGet<T>(key: string): Promise<T | null> {
 async function localSet(key: string, value: unknown) {
   await ensureLocalDir();
   await writeFile(
-    path.join(localDir, `${key}.json`),
+    path.join(localDir(), `${key}.json`),
     JSON.stringify(value, null, 2),
     "utf8",
   );
 }
 
 async function blobGet<T>(key: string): Promise<T | null> {
-  try {
-    const store = getStore({ name: "kids-mahaber", consistency: "strong" });
-    return (await store.get(key, { type: "json" })) as T | null;
-  } catch {
-    return null;
-  }
+  const value = await store().get(key, { type: "json" });
+  return (value as T | null) ?? null;
 }
 
 async function blobSet(key: string, value: unknown) {
-  const store = getStore({ name: "kids-mahaber", consistency: "strong" });
-  await store.setJSON(key, value);
+  await store().setJSON(key, value);
 }
 
 async function getJson<T>(key: string): Promise<T | null> {
-  if (useLocalFallback()) {
+  if (useFileStore()) {
     return localGet<T>(key);
   }
-  try {
-    return await blobGet<T>(key);
-  } catch {
-    return localGet<T>(key);
-  }
+  return blobGet<T>(key);
 }
 
 async function setJson(key: string, value: unknown) {
-  if (useLocalFallback()) {
+  if (useFileStore()) {
     await localSet(key, value);
     return;
   }
-  try {
-    await blobSet(key, value);
-  } catch {
-    await localSet(key, value);
-  }
+  await blobSet(key, value);
 }
 
 export async function getTracker(): Promise<TrackerData> {
   const data = await getJson<TrackerData>(TRACKER_KEY);
   if (!data) {
-    await setJson(TRACKER_KEY, defaultTracker);
-    return structuredClone(defaultTracker);
+    const seed = structuredClone(defaultTracker);
+    await setJson(TRACKER_KEY, seed);
+    return seed;
   }
   return data;
 }
@@ -92,10 +105,10 @@ export async function saveTracker(data: TrackerData): Promise<void> {
 export async function getKids(): Promise<KidsData> {
   const data = await getJson<KidsData>(KIDS_KEY);
   if (!data) {
-    await setJson(KIDS_KEY, defaultKids);
-    return structuredClone(defaultKids);
+    const seed = structuredClone(defaultKids);
+    await setJson(KIDS_KEY, seed);
+    return seed;
   }
-  // Migrate old "adults" key shape if ever present
   if ("adults" in (data as object) && !("kids" in (data as object))) {
     const migrated: KidsData = {
       kids: (data as unknown as { adults: KidsData["kids"] }).adults,

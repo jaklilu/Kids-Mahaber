@@ -69,10 +69,13 @@ Auto-refresh every 10s while tab visible.
 | Frontend | React 19 + Vite + TypeScript |
 | Hosting | Netlify |
 | API | Netlify Function `netlify/functions/api.ts` |
-| Storage (prod) | Netlify Blobs store `kids-mahaber` |
-| Storage (local) | `data/tracker.json` + `data/kids.json` when `USE_LOCAL_STORE=1` |
+| Storage (prod) | Netlify Blobs store `kids-mahaber` only — never `USE_LOCAL_STORE` on Netlify |
+| Storage (local) | `data/*.json` when `USE_LOCAL_STORE=1` |
+| Live site | https://kids-mahaber.netlify.app/ |
 | Email (optional) | Resend via `RESEND_API_KEY` + `EMAIL_TO` |
 | Admin auth | `ADMIN_PASSWORD` env + `x-admin-password` header |
+
+**Prod bug fixed 2026-07-12:** Site showed `ENOENT: mkdir '/var/task/data'` because Blobs failures (or local-store mode) fell back to writing under the function package dir, which is read-only. Store now uses Blobs on Netlify and never falls back to `/var/task/data`.
 
 ### Local commands
 
