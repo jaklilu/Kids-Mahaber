@@ -87,6 +87,7 @@ export function applyProposedSchedule(
   const members = data.members.map((m) => ({
     ...m,
     proposedDate: byName.get(m.name) ?? "",
+    dateConfirmed: false,
   }));
 
   const previous = preserveResponses

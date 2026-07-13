@@ -7,6 +7,8 @@ export interface Member {
   isCurrent: boolean;
   hostingDate: string;
   proposedDate?: string;
+  /** Host confirmed their proposed date */
+  dateConfirmed?: boolean;
   vote: Vote;
 }
 

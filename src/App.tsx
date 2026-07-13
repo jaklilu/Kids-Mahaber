@@ -259,6 +259,19 @@ export default function App() {
                   );
                 }
               }}
+              onConfirmProposedDate={async (name) => {
+                try {
+                  const res = await api.confirmProposedDate(name);
+                  applyTracker(res.data);
+                  setError(null);
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : "Could not confirm date",
+                  );
+                }
+              }}
             />
           )}
           {tab === "admin" && adminOk && (

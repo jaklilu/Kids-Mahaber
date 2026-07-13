@@ -95,6 +95,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name, weeks }),
     }),
+  confirmProposedDate: (name: string) =>
+    request<{ status: string; data: TrackerData }>("confirm-proposed-date", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
   getKids: () => request<KidsData>("kids"),
   voteKid: (name: string, vote: Vote) =>
     request<{ success: boolean }>("kids/vote", {

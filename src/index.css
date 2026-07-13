@@ -393,6 +393,34 @@ img {
   min-height: 0;
 }
 
+.date-confirm-btn {
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.65rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: var(--gold-soft);
+  border: 1px solid rgba(180, 120, 0, 0.35);
+  color: #7a4d00;
+  border-radius: 10px;
+}
+
+.date-confirm-btn:hover {
+  background: var(--gold);
+}
+
+.date-confirm-badge {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--green);
+  border-radius: 10px;
+}
+
 .hosted-date-label {
   display: none;
   font-size: 0.68rem;

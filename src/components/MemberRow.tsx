@@ -6,6 +6,7 @@ type Props = {
   showRsvpVotes: boolean;
   onRsvpVote: (vote: Vote) => void;
   onShiftProposedDate: (weeks: 1 | -1) => void;
+  onConfirmProposedDate: () => void;
 };
 
 export function MemberRow({
@@ -13,6 +14,7 @@ export function MemberRow({
   showRsvpVotes,
   onRsvpVote,
   onShiftProposedDate,
+  onConfirmProposedDate,
 }: Props) {
   const proposed = member.proposedDate
     ? formatDate(member.proposedDate)
@@ -85,26 +87,40 @@ export function MemberRow({
           {proposed}
         </span>
         {member.proposedDate ? (
-          <div className="week-shift-row">
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm week-shift-btn"
-              onClick={() => onShiftProposedDate(-1)}
-              title="One week earlier"
-              aria-label={`${member.name} one week earlier`}
-            >
-              −1 wk
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm week-shift-btn"
-              onClick={() => onShiftProposedDate(1)}
-              title="One week later"
-              aria-label={`${member.name} one week later`}
-            >
-              +1 wk
-            </button>
-          </div>
+          <>
+            <div className="week-shift-row">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm week-shift-btn"
+                onClick={() => onShiftProposedDate(-1)}
+                title="One week earlier"
+                aria-label={`${member.name} one week earlier`}
+              >
+                −1 wk
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm week-shift-btn"
+                onClick={() => onShiftProposedDate(1)}
+                title="One week later"
+                aria-label={`${member.name} one week later`}
+              >
+                +1 wk
+              </button>
+            </div>
+            {member.dateConfirmed ? (
+              <span className="date-confirm-badge">CONFIRMED</span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm date-confirm-btn"
+                onClick={onConfirmProposedDate}
+                aria-label={`${member.name} confirm proposed date`}
+              >
+                Pls Confirm
+              </button>
+            )}
+          </>
         ) : null}
       </div>
     </div>

@@ -343,6 +343,23 @@ export const handler: Handler = async (event) => {
       }
 
       member.proposedDate = shiftIsoDateByWeeks(member.proposedDate, weeks);
+      member.dateConfirmed = false;
+      await saveTracker(data);
+      return json(200, { status: "success", data });
+    }
+
+    if (action === "confirm-proposed-date" && event.httpMethod === "POST") {
+      const { name } = parseBody<{ name: string }>(event);
+      if (!name) return json(400, { error: "name required" });
+
+      const data = await getTracker();
+      const member = data.members.find((m) => m.name === name);
+      if (!member) return json(404, { error: "Member not found" });
+      if (!member.proposedDate) {
+        return json(400, { error: "No proposed date to confirm" });
+      }
+
+      member.dateConfirmed = true;
       await saveTracker(data);
       return json(200, { status: "success", data });
     }

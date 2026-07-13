@@ -10,6 +10,7 @@ type Props = {
   onVote: (index: number, vote: Vote) => void;
   onCastProposalVote: (vote: "yes" | "no") => void;
   onShiftProposedDate: (name: string, weeks: 1 | -1) => void;
+  onConfirmProposedDate: (name: string) => void;
 };
 
 function canInteract(data: TrackerData | null | undefined, current: Member | undefined): boolean {
@@ -26,6 +27,7 @@ export function TrackerPanel({
   onVote,
   onCastProposalVote,
   onShiftProposedDate,
+  onConfirmProposedDate,
 }: Props) {
   const members = data?.members ?? [];
   const current = members.find((m) => m.isCurrent);
@@ -118,6 +120,9 @@ export function TrackerPanel({
             onRsvpVote={(vote) => onVote(index, vote)}
             onShiftProposedDate={(weeks) =>
               onShiftProposedDate(member.name, weeks)
+            }
+            onConfirmProposedDate={() =>
+              onConfirmProposedDate(member.name)
             }
           />
         ))}
