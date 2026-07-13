@@ -9,6 +9,7 @@ type Props = {
   onConfirm: (value?: string) => void;
   mode?: "confirm" | "date" | "password";
   minDate?: string;
+  initialDate?: string;
 };
 
 export function Modal({
@@ -20,6 +21,7 @@ export function Modal({
   onConfirm,
   mode = "confirm",
   minDate,
+  initialDate,
 }: Props) {
   const inputId = useId();
   const [value, setValue] = useState("");
@@ -27,10 +29,14 @@ export function Modal({
 
   useEffect(() => {
     if (open) {
-      setValue(mode === "date" ? minDate || "" : "");
+      if (mode === "date") {
+        setValue(initialDate || minDate || "");
+      } else {
+        setValue("");
+      }
       queueMicrotask(() => inputRef.current?.focus());
     }
-  }, [open, mode, minDate]);
+  }, [open, mode, minDate, initialDate]);
 
   if (!open) return null;
 

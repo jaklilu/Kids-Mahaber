@@ -128,6 +128,49 @@ export const handler: Handler = async (event) => {
       return json(200, { status: "success", data });
     }
 
+    if (action === "update-host-date" && event.httpMethod === "POST") {
+      if (!requireAdmin(event)) return json(401, { error: "Unauthorized" });
+      const { index, date } = parseBody<{ index: number; date: string }>(event);
+
+      if (!date) return json(400, { error: "Date required" });
+      const [y, m, d] = date.split("-").map(Number);
+      const selected = new Date(y, m - 1, d);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (Number.isNaN(selected.getTime())) {
+        return json(400, { error: "Invalid date format" });
+      }
+      if (selected < today) {
+        return json(400, { error: "Date must be today or in the future" });
+      }
+
+      const data = await getTracker();
+      if (index < 0 || index >= data.members.length) {
+        return json(400, { error: "Invalid member" });
+      }
+
+      const member = data.members[index];
+      if (member.status !== "Hosting") {
+        return json(400, { error: "Member is not currently hosting" });
+      }
+
+      const oldDate = member.hostingDate;
+      member.hostingDate = date;
+
+      // Keep history in sync with the new gathering date
+      const historyEntry = data.history.find(
+        (h) => h.name === member.name && (!oldDate || h.date === oldDate),
+      );
+      if (historyEntry) {
+        historyEntry.date = date;
+      } else {
+        data.history.unshift({ name: member.name, date });
+      }
+
+      await saveTracker(data);
+      return json(200, { status: "success", data });
+    }
+
     if (action === "pass" && event.httpMethod === "POST") {
       const { currentIndex } = parseBody<{ currentIndex: number }>(event);
       const data = await getTracker();

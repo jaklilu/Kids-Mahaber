@@ -7,6 +7,7 @@ type Props = {
   onResetAll: () => void;
   onClearHistory: () => void;
   onResetMember: (index: number) => void;
+  onChangeHostDate: (index: number) => void;
   onMove: (index: number, direction: "up" | "down") => void;
   onDeleteHistory: (index: number) => void;
 };
@@ -16,6 +17,7 @@ export function AdminPanel({
   onResetAll,
   onClearHistory,
   onResetMember,
+  onChangeHostDate,
   onMove,
   onDeleteHistory,
 }: Props) {
@@ -45,6 +47,7 @@ export function AdminPanel({
         </div>
         {data.members.map((member, index) => {
           const hostedDate = getLastHostedDate(member, data.history ?? []);
+          const isHosting = member.status === "Hosting" && Boolean(member.hostingDate);
           return (
             <div className="member-row" key={member.name}>
               <div className="person">
@@ -61,11 +64,20 @@ export function AdminPanel({
                     {member.name}
                   </div>
                   <p className="status-line">
-                    {member.status === "Hosting" && member.hostingDate
+                    {isHosting
                       ? `Hosting ${formatDate(member.hostingDate)}`
                       : member.status || "Pending"}
                   </p>
                   <div className="actions" style={{ marginTop: "0.45rem" }}>
+                    {isHosting && (
+                      <button
+                        type="button"
+                        className="btn btn-host btn-sm"
+                        onClick={() => onChangeHostDate(index)}
+                      >
+                        Change date
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"

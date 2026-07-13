@@ -69,6 +69,12 @@ export const api = {
       { method: "POST" },
       true,
     ),
+  updateHostDate: (index: number, date: string) =>
+    request<{ status: string; data: TrackerData }>(
+      "update-host-date",
+      { method: "POST", body: JSON.stringify({ index, date }) },
+      true,
+    ),
   getKids: () => request<KidsData>("kids"),
   voteKid: (name: string, vote: Vote) =>
     request<{ success: boolean }>("kids/vote", {

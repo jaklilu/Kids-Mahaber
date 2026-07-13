@@ -32,6 +32,7 @@ export default function App() {
   const [dateOpen, setDateOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [changeDateIndex, setChangeDateIndex] = useState<number | null>(null);
   const [pendingKidVote, setPendingKidVote] = useState<{
     name: string;
     vote: Vote;
@@ -260,6 +261,7 @@ export default function App() {
                 }
               }}
               onMove={moveMember}
+              onChangeHostDate={(index) => setChangeDateIndex(index)}
               onDeleteHistory={deleteHistory}
             />
           )}
@@ -278,6 +280,38 @@ export default function App() {
         confirmLabel="Confirm host"
         onCancel={() => setDateOpen(false)}
         onConfirm={confirmHost}
+      />
+
+      <Modal
+        open={changeDateIndex !== null}
+        title="Change hosting date"
+        message={
+          changeDateIndex !== null
+            ? `Pick a new date for ${data.members[changeDateIndex]?.name ?? "this host"}.`
+            : undefined
+        }
+        mode="date"
+        minDate={todayIso()}
+        initialDate={
+          changeDateIndex !== null
+            ? data.members[changeDateIndex]?.hostingDate || todayIso()
+            : undefined
+        }
+        confirmLabel="Save date"
+        onCancel={() => setChangeDateIndex(null)}
+        onConfirm={async (date) => {
+          if (!date || changeDateIndex === null) return;
+          try {
+            const res = await api.updateHostDate(changeDateIndex, date);
+            setData(res.data);
+            setChangeDateIndex(null);
+            setError(null);
+          } catch (err) {
+            setError(
+              err instanceof Error ? err.message : "Could not update date",
+            );
+          }
+        }}
       />
 
       <Modal
