@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
   clearAdminPassword,
@@ -28,6 +28,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adminOk, setAdminOk] = useState(Boolean(getAdminPassword()));
+  const refreshSeq = useRef(0);
 
   const [dateOpen, setDateOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(false);
@@ -43,11 +44,14 @@ export default function App() {
   } | null>(null);
 
   const refresh = useCallback(async () => {
+    const seq = ++refreshSeq.current;
     try {
       const [tracker, kidsData] = await Promise.all([
         api.getTracker(),
         api.getKids(),
       ]);
+      // Ignore outdated polls so a slow GET can't wipe a vote that just saved.
+      if (seq !== refreshSeq.current) return;
       setData({
         ...emptyTracker,
         ...tracker,
@@ -58,10 +62,23 @@ export default function App() {
       setKids(kidsData.kids ?? []);
       setError(null);
     } catch (err) {
+      if (seq !== refreshSeq.current) return;
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
-      setLoading(false);
+      if (seq === refreshSeq.current) setLoading(false);
     }
+  }, []);
+
+  const applyTracker = useCallback((tracker: TrackerData) => {
+    // Invalidate in-flight polls so they can't overwrite this fresher state.
+    refreshSeq.current += 1;
+    setData({
+      ...emptyTracker,
+      ...tracker,
+      members: tracker.members ?? [],
+      history: tracker.history ?? [],
+      currentRoundPassers: tracker.currentRoundPassers ?? [],
+    });
   }, []);
 
   useEffect(() => {
@@ -100,7 +117,7 @@ export default function App() {
     if (index < 0) return;
     try {
       const res = await api.host(index, date);
-      setData(res.data);
+      applyTracker(res.data);
       setDateOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not set host");
@@ -112,7 +129,7 @@ export default function App() {
     if (index < 0) return;
     try {
       const res = await api.pass(index);
-      setData(res.data);
+      applyTracker(res.data);
       setPassOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not pass");
@@ -122,7 +139,7 @@ export default function App() {
   async function castMemberVote(index: number, vote: Vote) {
     const next = structuredClone(data);
     next.members[index].vote = vote;
-    setData(next);
+    applyTracker(next);
     try {
       await api.saveTracker(next);
     } catch (err) {
@@ -138,6 +155,7 @@ export default function App() {
   async function confirmKidVote() {
     if (!pendingKidVote) return;
     const { name, vote } = pendingKidVote;
+    refreshSeq.current += 1;
     setKids((prev) =>
       prev.map((k) => (k.name === name ? { ...k, vote } : k)),
     );
@@ -156,7 +174,7 @@ export default function App() {
     const temp = next.members[index];
     next.members[index] = next.members[newIndex];
     next.members[newIndex] = temp;
-    setData(next);
+    applyTracker(next);
     try {
       await api.saveTracker(next);
     } catch (err) {
@@ -168,7 +186,7 @@ export default function App() {
   async function deleteHistory(index: number) {
     const next = structuredClone(data);
     next.history.splice(index, 1);
-    setData(next);
+    applyTracker(next);
     try {
       await api.saveTracker(next);
     } catch (err) {
@@ -231,7 +249,7 @@ export default function App() {
                 if (!confirmed) return;
                 try {
                   const res = await api.shiftProposedDate(name, weeks);
-                  setData(res.data);
+                  applyTracker(res.data);
                   setError(null);
                 } catch (err) {
                   setError(
@@ -259,7 +277,7 @@ export default function App() {
                 if (!window.confirm("Clear all hosting history?")) return;
                 try {
                   const res = await api.clearHistory();
-                  setData(res.data);
+                  applyTracker(res.data);
                 } catch (err) {
                   setError(
                     err instanceof Error ? err.message : "Clear failed",
@@ -277,7 +295,7 @@ export default function App() {
                 }
                 try {
                   const res = await api.resetMember(index);
-                  setData(res.data);
+                  applyTracker(res.data);
                   setError(null);
                 } catch (err) {
                   setError(
@@ -297,7 +315,7 @@ export default function App() {
                 }
                 try {
                   const res = await api.generateSchedule();
-                  setData(res.data);
+                  applyTracker(res.data);
                   setError(null);
                 } catch (err) {
                   setError(
@@ -315,7 +333,7 @@ export default function App() {
                 if (!confirmed) return;
                 try {
                   const res = await api.shiftProposedDate(name, weeks);
-                  setData(res.data);
+                  applyTracker(res.data);
                   setError(null);
                 } catch (err) {
                   setError(
@@ -373,7 +391,7 @@ export default function App() {
           if (!date || changeDateIndex === null) return;
           try {
             const res = await api.updateHostDate(changeDateIndex, date);
-            setData(res.data);
+            applyTracker(res.data);
             setChangeDateIndex(null);
             setError(null);
           } catch (err) {
@@ -427,7 +445,7 @@ export default function App() {
               pendingProposalVote.vote,
               pendingProposalVote.audience,
             );
-            setData(res.data);
+            applyTracker(res.data);
             setPendingProposalVote(null);
             setError(null);
           } catch (err) {

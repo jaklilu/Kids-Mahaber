@@ -8,7 +8,7 @@ import {
   shiftIsoDateByWeeks,
 } from "./_shared/schedule";
 import { getKids, getTracker, saveKids, saveTracker } from "./_shared/store";
-import type { TrackerData } from "./_shared/types";
+import type { TrackerData, ScheduleProposalResponse } from "./_shared/types";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -53,6 +53,49 @@ function hostIsLocked(data: TrackerData): boolean {
   return !isDatePassed(host.hostingDate);
 }
 
+function mergeNamedVotes(
+  a: ScheduleProposalResponse[] | undefined,
+  b: ScheduleProposalResponse[] | undefined,
+): ScheduleProposalResponse[] {
+  const map = new Map<string, ScheduleProposalResponse>();
+  for (const entry of [...(a ?? []), ...(b ?? [])]) {
+    const key = entry.firstName.trim().toLowerCase();
+    if (!key) continue;
+    map.set(key, entry);
+  }
+  return [...map.values()];
+}
+
+/** Keep process votes when a client POSTs a stale full tracker snapshot. */
+function mergeTrackerOnClientSave(
+  incoming: TrackerData,
+  oldData: TrackerData,
+): TrackerData {
+  const oldProposal = oldData.scheduleProposal;
+  const nextProposal = incoming.scheduleProposal;
+  if (!oldProposal && !nextProposal) return incoming;
+
+  return {
+    ...incoming,
+    scheduleProposal: {
+      title: nextProposal?.title ?? oldProposal?.title ?? "",
+      summary: nextProposal?.summary ?? oldProposal?.summary ?? "",
+      createdAt: nextProposal?.createdAt ?? oldProposal?.createdAt ?? "",
+      deadlineAt: nextProposal?.deadlineAt ?? oldProposal?.deadlineAt ?? "",
+      adopted: Boolean(nextProposal?.adopted || oldProposal?.adopted),
+      threshold: nextProposal?.threshold ?? oldProposal?.threshold ?? 0.7,
+      responses: mergeNamedVotes(
+        oldProposal?.responses,
+        nextProposal?.responses,
+      ),
+      kidsResponses: mergeNamedVotes(
+        oldProposal?.kidsResponses,
+        nextProposal?.kidsResponses,
+      ),
+    },
+  };
+}
+
 export const handler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: cors, body: "" };
@@ -78,9 +121,10 @@ export const handler: Handler = async (event) => {
       const incoming = parseBody<TrackerData>(event);
       const oldData = await getTracker();
       const oldHost = oldData.members.find((m) => m.status === "Hosting");
-      const newHost = incoming.members.find((m) => m.status === "Hosting");
+      const merged = mergeTrackerOnClientSave(incoming, oldData);
+      const newHost = merged.members.find((m) => m.status === "Hosting");
 
-      await saveTracker(incoming);
+      await saveTracker(merged);
 
       if (
         newHost &&
