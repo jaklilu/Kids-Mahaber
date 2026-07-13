@@ -1,5 +1,4 @@
 import type { HistoryEntry, Member, Vote } from "../types";
-import { displayHostedDate, getLastHostedDate } from "../hosting";
 import { formatDate } from "../utils";
 
 type Props = {
@@ -12,12 +11,10 @@ type Props = {
 
 export function MemberRow({
   member,
-  history,
   showRsvpVotes,
   onRsvpVote,
   onShiftProposedDate,
 }: Props) {
-  const hostedDate = getLastHostedDate(member, history);
   const proposed = member.proposedDate
     ? formatDate(member.proposedDate)
     : "—";
@@ -110,12 +107,6 @@ export function MemberRow({
             </button>
           </div>
         ) : null}
-      </div>
-      <div className="hosted-date-cell">
-        <span className="hosted-date-label">Date hosted</span>
-        <span className={`hosted-date-value ${hostedDate ? "" : "empty"}`}>
-          {displayHostedDate(hostedDate)}
-        </span>
       </div>
     </div>
   );

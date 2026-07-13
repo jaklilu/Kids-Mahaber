@@ -108,7 +108,6 @@ export function TrackerPanel({
         >
           <span>Member</span>
           <span>Proposed date</span>
-          <span>Date hosted</span>
         </div>
         {members.map((member, index) => (
           <MemberRow
