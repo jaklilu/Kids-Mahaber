@@ -50,27 +50,37 @@ export function MemberRow({
           ) : null}
           {showRsvpVotes && (
             <div className="vote-block">
-              <span className="please-vote">Please Vote</span>
-              <div className="vote-row">
-                <button
-                  type="button"
-                  className={`vote-btn thumb yes ${member.vote === "yes" ? "active" : ""}`}
-                  onClick={() => onRsvpVote("yes")}
-                  aria-label={`${member.name} RSVP yes`}
-                  title="Yes"
+              {member.vote ? (
+                <span
+                  className={`vote-result ${member.vote === "yes" ? "yes" : "no"}`}
                 >
-                  👍
-                </button>
-                <button
-                  type="button"
-                  className={`vote-btn thumb no ${member.vote === "no" ? "active" : ""}`}
-                  onClick={() => onRsvpVote("no")}
-                  aria-label={`${member.name} RSVP no`}
-                  title="No"
-                >
-                  👎
-                </button>
-              </div>
+                  {member.vote === "yes" ? "👍" : "👎"}
+                </span>
+              ) : (
+                <>
+                  <span className="please-vote">Please Vote</span>
+                  <div className="vote-row">
+                    <button
+                      type="button"
+                      className="vote-btn thumb yes"
+                      onClick={() => onRsvpVote("yes")}
+                      aria-label={`${member.name} RSVP yes`}
+                      title="Yes"
+                    >
+                      👍
+                    </button>
+                    <button
+                      type="button"
+                      className="vote-btn thumb no"
+                      onClick={() => onRsvpVote("no")}
+                      aria-label={`${member.name} RSVP no`}
+                      title="No"
+                    >
+                      👎
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -112,27 +122,38 @@ export function MemberRow({
         </span>
       </div>
       <div className="hosted-date-cell proposal-vote-cell">
-        <span className="please-vote">Please Vote</span>
-        <div className="vote-row">
-          <button
-            type="button"
-            className={`vote-btn thumb yes ${proposalVote === "yes" ? "active" : ""}`}
-            onClick={() => onProposalVote("yes")}
-            aria-label={`${member.name} agree with schedule`}
-            title="Agree"
+        {proposalVote ? (
+          <span
+            className={`vote-result ${proposalVote === "yes" ? "yes" : "no"}`}
+            title={proposalVote === "yes" ? "Agreed" : "Declined"}
           >
-            👍
-          </button>
-          <button
-            type="button"
-            className={`vote-btn thumb no ${proposalVote === "no" ? "active" : ""}`}
-            onClick={() => onProposalVote("no")}
-            aria-label={`${member.name} disagree with schedule`}
-            title="Disagree"
-          >
-            👎
-          </button>
-        </div>
+            {proposalVote === "yes" ? "👍" : "👎"}
+          </span>
+        ) : (
+          <>
+            <span className="please-vote">Please Vote</span>
+            <div className="vote-row">
+              <button
+                type="button"
+                className="vote-btn thumb yes"
+                onClick={() => onProposalVote("yes")}
+                aria-label={`${member.name} agree with schedule`}
+                title="Agree"
+              >
+                👍
+              </button>
+              <button
+                type="button"
+                className="vote-btn thumb no"
+                onClick={() => onProposalVote("no")}
+                aria-label={`${member.name} disagree with schedule`}
+                title="Disagree"
+              >
+                👎
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -490,6 +490,22 @@ img {
   line-height: 1;
 }
 
+.vote-result {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.vote-result.yes {
+  filter: drop-shadow(0 1px 0 rgba(21, 148, 71, 0.35));
+}
+
+.vote-result.no {
+  filter: drop-shadow(0 1px 0 rgba(223, 52, 47, 0.35));
+}
+
 @media (max-width: 640px) {
   .member-row,
   .member-list-header {

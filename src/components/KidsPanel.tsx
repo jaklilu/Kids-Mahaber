@@ -29,27 +29,37 @@ export function KidsPanel({ kids, onVote }: Props) {
                   {kid.name}
                 </div>
                 <div className="vote-block">
-                  <span className="please-vote">Please Vote</span>
-                  <div className="vote-row">
-                    <button
-                      type="button"
-                      className={`vote-btn thumb yes ${kid.vote === "yes" ? "active" : ""}`}
-                      onClick={() => onVote(kid.name, "yes")}
-                      aria-label={`${kid.name} yes`}
-                      title="Yes"
+                  {kid.vote ? (
+                    <span
+                      className={`vote-result ${kid.vote === "yes" ? "yes" : "no"}`}
                     >
-                      👍
-                    </button>
-                    <button
-                      type="button"
-                      className={`vote-btn thumb no ${kid.vote === "no" ? "active" : ""}`}
-                      onClick={() => onVote(kid.name, "no")}
-                      aria-label={`${kid.name} no`}
-                      title="No"
-                    >
-                      👎
-                    </button>
-                  </div>
+                      {kid.vote === "yes" ? "👍" : "👎"}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="please-vote">Please Vote</span>
+                      <div className="vote-row">
+                        <button
+                          type="button"
+                          className="vote-btn thumb yes"
+                          onClick={() => onVote(kid.name, "yes")}
+                          aria-label={`${kid.name} yes`}
+                          title="Yes"
+                        >
+                          👍
+                        </button>
+                        <button
+                          type="button"
+                          className="vote-btn thumb no"
+                          onClick={() => onVote(kid.name, "no")}
+                          aria-label={`${kid.name} no`}
+                          title="No"
+                        >
+                          👎
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
