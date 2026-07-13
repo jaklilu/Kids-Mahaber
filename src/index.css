@@ -315,6 +315,14 @@ img {
   animation: fade-in 0.45s ease both;
 }
 
+.member-row-schedule,
+.member-list-header-schedule {
+  grid-template-columns:
+    minmax(0, 1.45fr)
+    minmax(7.5rem, 1.1fr)
+    minmax(6.5rem, 0.95fr);
+}
+
 .member-row:last-child {
   border-bottom: 0;
   padding-bottom: 0;
@@ -619,6 +627,38 @@ img {
     justify-items: start;
   }
 
+  .member-list-header {
+    display: none;
+  }
+
+  .member-row-schedule {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "person person"
+      "proposed hosted";
+    align-items: start;
+    gap: 0.7rem 0.65rem;
+    padding: 1.05rem 0;
+  }
+
+  .member-row-schedule > .person {
+    grid-area: person;
+    width: 100%;
+  }
+
+  .member-row-schedule .member-main .person-name {
+    font-size: 1.12rem !important;
+  }
+
+  .member-row-schedule .proposed-date-cell {
+    grid-area: proposed;
+  }
+
+  .member-row-schedule > .hosted-date-cell:not(.proposed-date-cell) {
+    grid-area: hosted;
+  }
+
   .hosted-date-cell {
     min-width: 0;
     width: 100%;
@@ -627,6 +667,43 @@ img {
     justify-content: space-between;
     text-align: left;
     padding-left: 4.5rem;
+  }
+
+  .member-row-schedule .hosted-date-cell {
+    padding: 0.65rem 0.7rem;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 0.3rem;
+    text-align: left;
+    justify-self: stretch;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+
+  .member-row-schedule .hosted-date-label {
+    display: block;
+    font-size: 0.72rem;
+    margin: 0;
+  }
+
+  .member-row-schedule .hosted-date-value {
+    font-size: 1rem;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .member-row-schedule .week-shift-row {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 0.2rem;
+    gap: 0.35rem;
+  }
+
+  .member-row-schedule .week-shift-btn {
+    font-size: 0.78rem !important;
+    padding: 0.35rem 0.55rem !important;
   }
 
   .proposal-vote-cell {
@@ -644,10 +721,6 @@ img {
 
   .hosted-date-value {
     font-size: 0.82rem;
-  }
-
-  .member-list-header {
-    display: none;
   }
 }
 

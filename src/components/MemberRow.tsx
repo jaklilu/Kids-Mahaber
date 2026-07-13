@@ -82,7 +82,7 @@ export function MemberRow({
         </div>
       </div>
       <div className="hosted-date-cell proposed-date-cell">
-        <span className="hosted-date-label">Proposed</span>
+        <span className="hosted-date-label">Proposed date</span>
         <span
           className={`hosted-date-value ${member.proposedDate ? "" : "empty"}`}
         >
@@ -112,7 +112,7 @@ export function MemberRow({
         ) : null}
       </div>
       <div className="hosted-date-cell">
-        <span className="hosted-date-label">Hosted</span>
+        <span className="hosted-date-label">Date hosted</span>
         <span className={`hosted-date-value ${hostedDate ? "" : "empty"}`}>
           {displayHostedDate(hostedDate)}
         </span>
