@@ -1,7 +1,21 @@
-import type { Member, ScheduleProposal, TrackerData, Vote } from "./types";
+import type {
+  Member,
+  ScheduleProposal,
+  ScheduleProposalResponse,
+  TrackerData,
+  Vote,
+} from "./types";
 
-export const PROPOSAL_SUMMARY =
-  "Frea hosts on the second Saturday one month from now; then every three months on the second Saturday for each person in order. If a date does not work, use −1 wk or +1 wk under Proposed date to move it one week earlier or later. If more than 70% vote Yes, this becomes our process.";
+export const PROPOSAL_TITLE = "Vote on the New Hosting Process";
+
+export const PROPOSAL_SUMMARY = [
+  "We propose a new hosting schedule:",
+  "Frea will host on the second Saturday, one month from now.",
+  "After that, hosting will rotate to the next person every three months, always on the second Saturday, following the established order.",
+  "If the scheduled date does not work for a host, it may be moved one week earlier or one week later (−1 week or +1 week), as shown in the schedule table below.",
+  "This vote is only to approve the hosting process. It is not a vote on any specific hosting date.",
+  "If more than 70% of the family votes in favor, this will become our new hosting process.",
+].join("\n\n");
 
 export function secondSaturdayOfMonth(year: number, monthIndex: number): Date {
   const first = new Date(year, monthIndex, 1);
@@ -37,43 +51,46 @@ export function buildQuarterlySecondSaturdaySchedule(
   });
 }
 
+function migrateLegacyVotes(
+  proposal: ScheduleProposal | null | undefined,
+): ScheduleProposalResponse[] {
+  if (!proposal) return [];
+  if (proposal.responses?.length) return proposal.responses;
+  const legacy = (proposal as { votes?: { name: string; vote: Vote }[] }).votes;
+  if (!legacy) return [];
+  return legacy
+    .filter((v) => v.vote === "yes" || v.vote === "no")
+    .map((v) => ({ firstName: v.name, vote: v.vote as "yes" | "no" }));
+}
+
 export function applyProposedSchedule(
   data: TrackerData,
   from: Date = new Date(),
-  preserveVotes = false,
+  preserveResponses = false,
 ): TrackerData {
   const schedule = buildQuarterlySecondSaturdaySchedule(data.members, from);
   const byName = new Map(schedule.map((s) => [s.name, s.date]));
-  const previousVotes = new Map(
-    (data.scheduleProposal?.votes ?? []).map((v) => [v.name, v.vote]),
-  );
 
   const members = data.members.map((m) => ({
     ...m,
     proposedDate: byName.get(m.name) ?? "",
   }));
 
-  const votes = members.map((m) => ({
-    name: m.name,
-    photo: m.photo,
-    vote: (preserveVotes ? previousVotes.get(m.name) ?? null : null) as Vote,
-  }));
+  const previous = preserveResponses
+    ? migrateLegacyVotes(data.scheduleProposal)
+    : [];
 
   const scheduleProposal: ScheduleProposal = {
-    title: "Quarterly second-Saturday hosting",
+    title: PROPOSAL_TITLE,
     summary: PROPOSAL_SUMMARY,
     createdAt: toIsoDate(from),
     adopted: false,
     threshold: 0.7,
-    votes,
+    responses: previous,
   };
 
-  // Re-evaluate adoption from preserved votes
-  const yes = votes.filter((v) => v.vote === "yes").length;
-  const total = votes.length;
-  if (total > 0 && yes / total > scheduleProposal.threshold) {
-    scheduleProposal.adopted = true;
-  }
+  const stats = proposalStats(scheduleProposal, members.length);
+  scheduleProposal.adopted = stats.adopted;
 
   return {
     ...data,
@@ -84,34 +101,70 @@ export function applyProposedSchedule(
 
 export function ensureScheduleProposal(data: TrackerData): TrackerData {
   const missingDates = data.members.some((m) => !m.proposedDate);
-  const missingProposal = !data.scheduleProposal?.votes?.length;
+  const missingProposal = !data.scheduleProposal;
   if (missingDates || missingProposal) {
     return applyProposedSchedule(data, new Date(), true);
   }
-  if (data.scheduleProposal && data.scheduleProposal.summary !== PROPOSAL_SUMMARY) {
-    return {
+
+  let updated = data;
+  const responses = migrateLegacyVotes(data.scheduleProposal);
+  if (
+    data.scheduleProposal &&
+    (!data.scheduleProposal.responses ||
+      data.scheduleProposal.responses.length !== responses.length)
+  ) {
+    updated = {
       ...data,
       scheduleProposal: {
         ...data.scheduleProposal,
-        summary: PROPOSAL_SUMMARY,
+        responses,
       },
     };
   }
-  return data;
+
+  if (
+    updated.scheduleProposal &&
+    updated.scheduleProposal.summary !== PROPOSAL_SUMMARY
+  ) {
+    updated = {
+      ...updated,
+      scheduleProposal: {
+        ...updated.scheduleProposal,
+        summary: PROPOSAL_SUMMARY,
+        title: PROPOSAL_TITLE,
+      },
+    };
+  }
+
+  return updated;
 }
 
-export function proposalStats(proposal: ScheduleProposal | null | undefined) {
-  const votes = proposal?.votes ?? [];
-  const total = votes.length;
-  const yes = votes.filter((v) => v.vote === "yes").length;
-  const no = votes.filter((v) => v.vote === "no").length;
-  const pending = votes.filter((v) => v.vote == null).length;
+export function proposalStats(
+  proposal: ScheduleProposal | null | undefined,
+  familySize: number,
+) {
+  const responses = migrateLegacyVotes(proposal);
+  const yes = responses.filter((r) => r.vote === "yes").length;
+  const no = responses.filter((r) => r.vote === "no").length;
+  const voted = yes + no;
   const threshold = proposal?.threshold ?? 0.7;
-  const yesShare = total === 0 ? 0 : yes / total;
-  const adopted = Boolean(proposal?.adopted) || yesShare > threshold;
-  const needed = Math.floor(total * threshold) + 1;
+  const yesShare = familySize === 0 ? 0 : yes / familySize;
+  const adopted =
+    Boolean(proposal?.adopted) || (familySize > 0 && yesShare > threshold);
+  const needed = Math.floor(familySize * threshold) + 1;
 
-  return { total, yes, no, pending, yesShare, adopted, needed, threshold };
+  return {
+    familySize,
+    yes,
+    no,
+    voted,
+    yesShare,
+    adopted,
+    needed,
+    threshold,
+    yesNames: responses.filter((r) => r.vote === "yes").map((r) => r.firstName),
+    noNames: responses.filter((r) => r.vote === "no").map((r) => r.firstName),
+  };
 }
 
 export function shiftIsoDateByWeeks(isoDate: string, weeks: number): string {

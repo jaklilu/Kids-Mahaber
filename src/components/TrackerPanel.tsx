@@ -8,7 +8,7 @@ type Props = {
   onHost: () => void;
   onPass: () => void;
   onVote: (index: number, vote: Vote) => void;
-  onProposalVote: (name: string, vote: Vote) => void;
+  onCastProposalVote: (vote: "yes" | "no") => void;
   onShiftProposedDate: (name: string, weeks: 1 | -1) => void;
 };
 
@@ -24,7 +24,7 @@ export function TrackerPanel({
   onHost,
   onPass,
   onVote,
-  onProposalVote,
+  onCastProposalVote,
   onShiftProposedDate,
 }: Props) {
   const members = data?.members ?? [];
@@ -32,9 +32,6 @@ export function TrackerPanel({
   const currentIndex = members.findIndex((m) => m.isCurrent);
   const interactive = canInteract(data, current);
   const hostConfirmed = members.some((m) => m.status === "Hosting");
-  const proposalVotes = new Map(
-    (data.scheduleProposal?.votes ?? []).map((v) => [v.name, v.vote]),
-  );
 
   return (
     <div className="panel">
@@ -90,10 +87,17 @@ export function TrackerPanel({
         )}
       </div>
 
-      <ScheduleProposalPanel proposal={data.scheduleProposal} />
+      <ScheduleProposalPanel
+        proposal={data.scheduleProposal}
+        familySize={members.length}
+        onCastVote={onCastProposalVote}
+      />
 
       <div className="card">
-        <h3 className="section-title">Family schedule &amp; votes</h3>
+        <h3 className="section-title">Family schedule</h3>
+        <p className="status-line" style={{ marginBottom: "0.75rem" }}>
+          Proposed hosting dates only — use −1 wk / +1 wk if your date needs adjusting.
+        </p>
         <div
           className="member-list-header member-list-header-schedule"
           aria-hidden="true"
@@ -101,7 +105,6 @@ export function TrackerPanel({
           <span>Member</span>
           <span>Proposed date</span>
           <span>Date hosted</span>
-          <span>Schedule vote</span>
         </div>
         {members.map((member, index) => (
           <MemberRow
@@ -113,9 +116,7 @@ export function TrackerPanel({
               !member.isCurrent &&
               member.status !== "Hosting"
             }
-            proposalVote={proposalVotes.get(member.name) ?? null}
             onRsvpVote={(vote) => onVote(index, vote)}
-            onProposalVote={(vote) => onProposalVote(member.name, vote)}
             onShiftProposedDate={(weeks) =>
               onShiftProposedDate(member.name, weeks)
             }

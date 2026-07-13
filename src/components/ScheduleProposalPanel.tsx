@@ -4,13 +4,18 @@ import { proposalStats } from "../schedule";
 
 type Props = {
   proposal: ScheduleProposal | null | undefined;
+  familySize: number;
+  onCastVote: (vote: "yes" | "no") => void;
 };
 
-/** Summary + progress only — votes live in the family schedule table. */
-export function ScheduleProposalPanel({ proposal }: Props) {
+export function ScheduleProposalPanel({
+  proposal,
+  familySize,
+  onCastVote,
+}: Props) {
   if (!proposal) return null;
 
-  const stats = proposalStats(proposal);
+  const stats = proposalStats(proposal, familySize);
   const percent = Math.round(stats.yesShare * 100);
   const barWidth = Math.min(100, percent);
 
@@ -21,19 +26,48 @@ export function ScheduleProposalPanel({ proposal }: Props) {
         {stats.adopted ? (
           <span className="badge">Adopted</span>
         ) : (
-          <span className="badge warn">Open for votes</span>
+          <span className="badge warn">Open for Voting</span>
         )}
       </div>
-      <p className="status-line proposal-summary">
-        {proposal.summary.includes("−1 wk")
-          ? proposal.summary
-          : `${proposal.summary} If a date does not work, use −1 wk or +1 wk under Proposed date to move it one week earlier or later.`}
-      </p>
+
+      <div className="proposal-summary">
+        {proposal.summary.split(/\n\n+/).map((paragraph) => (
+          <p key={paragraph.slice(0, 40)} className="status-line">
+            {paragraph}
+          </p>
+        ))}
+      </div>
+
+      <div className="proposal-vote-cta">
+        <p className="please-vote">Please Vote</p>
+        <div className="proposal-vote-buttons">
+          <button
+            type="button"
+            className="vote-btn thumb yes large"
+            onClick={() => onCastVote("yes")}
+            aria-label="Agree with proposal"
+          >
+            👍
+          </button>
+          <button
+            type="button"
+            className="vote-btn thumb no large"
+            onClick={() => onCastVote("no")}
+            aria-label="Disagree with proposal"
+          >
+            👎
+          </button>
+        </div>
+        <p className="status-line">
+          Tap a thumb, then type your first name to record your vote.
+        </p>
+      </div>
 
       <div className="proposal-progress">
         <div className="proposal-progress-meta">
-          <strong>{stats.yes}</strong> of <strong>{stats.total}</strong> Yes
-          ({percent}%) — need more than 70% ({stats.needed}+ Yes)
+          <strong>{stats.yes}</strong> of <strong>{stats.familySize}</strong>{" "}
+          family members agree ({percent}%) — need more than 70% (
+          {stats.needed}+ 👍)
         </div>
         <div
           className="proposal-bar"
@@ -51,9 +85,37 @@ export function ScheduleProposalPanel({ proposal }: Props) {
         <p className="status-line">
           {stats.adopted
             ? "More than 70% agreed — this is our new hosting process."
-            : `${stats.pending} still deciding · ${stats.no} No · Vote in the table below`}
+            : `${stats.voted} vote(s) recorded · ${stats.no} 👎`}
         </p>
       </div>
+
+      <div className="proposal-tally">
+        <div className="proposal-tally-col">
+          <h4>👍 Agree ({stats.yes})</h4>
+          {stats.yesNames.length === 0 ? (
+            <p className="empty">No votes yet</p>
+          ) : (
+            <ul className="proposal-name-list">
+              {stats.yesNames.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div className="proposal-tally-col">
+          <h4>👎 Disagree ({stats.no})</h4>
+          {stats.noNames.length === 0 ? (
+            <p className="empty">No votes yet</p>
+          ) : (
+            <ul className="proposal-name-list">
+              {stats.noNames.map((name) => (
+                <li key={name}>{name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
       <p className="status-line">Proposal opened {formatDate(proposal.createdAt)}.</p>
     </div>
   );

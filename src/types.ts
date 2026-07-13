@@ -6,7 +6,6 @@ export interface Member {
   status: "" | "Hosting" | "Passed";
   isCurrent: boolean;
   hostingDate: string;
-  /** Planned date from the quarterly second-Saturday proposal */
   proposedDate?: string;
   vote: Vote;
 }
@@ -17,10 +16,9 @@ export interface HistoryEntry {
   round?: number;
 }
 
-export interface ScheduleProposalVote {
-  name: string;
-  photo: string;
-  vote: Vote;
+export interface ScheduleProposalResponse {
+  firstName: string;
+  vote: "yes" | "no";
 }
 
 export interface ScheduleProposal {
@@ -28,9 +26,8 @@ export interface ScheduleProposal {
   summary: string;
   createdAt: string;
   adopted: boolean;
-  /** Fraction required to adopt (more than this wins). Default 0.7 */
   threshold: number;
-  votes: ScheduleProposalVote[];
+  responses: ScheduleProposalResponse[];
 }
 
 export interface TrackerData {

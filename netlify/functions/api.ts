@@ -302,25 +302,34 @@ export const handler: Handler = async (event) => {
     }
 
     if (action === "proposal-vote" && event.httpMethod === "POST") {
-      const { name, vote } = parseBody<{ name: string; vote: "yes" | "no" }>(
-        event,
-      );
-      if (!name || (vote !== "yes" && vote !== "no")) {
-        return json(400, { error: "name and vote required" });
+      const { firstName, vote } = parseBody<{
+        firstName: string;
+        vote: "yes" | "no";
+      }>(event);
+      const normalized = (firstName || "").trim();
+      if (!normalized || (vote !== "yes" && vote !== "no")) {
+        return json(400, { error: "firstName and vote required" });
       }
 
       const data = await getTracker();
       if (!data.scheduleProposal) {
         Object.assign(data, applyProposedSchedule(data, new Date(), true));
       }
-      const ballot = data.scheduleProposal?.votes.find((v) => v.name === name);
-      if (!ballot) return json(404, { error: "Voter not found" });
-
-      ballot.vote = vote;
-      const stats = proposalStats(data.scheduleProposal);
-      if (data.scheduleProposal) {
-        data.scheduleProposal.adopted = stats.yesShare > stats.threshold;
+      if (!data.scheduleProposal) {
+        return json(500, { error: "Proposal not initialized" });
       }
+
+      const responses = data.scheduleProposal.responses ?? [];
+      const key = normalized.toLowerCase();
+      if (responses.some((r) => r.firstName.toLowerCase() === key)) {
+        return json(400, { error: "That name already voted" });
+      }
+
+      responses.push({ firstName: normalized, vote });
+      data.scheduleProposal.responses = responses;
+
+      const stats = proposalStats(data.scheduleProposal, data.members.length);
+      data.scheduleProposal.adopted = stats.adopted;
 
       await saveTracker(data);
       return json(200, {

@@ -37,6 +37,9 @@ export default function App() {
     name: string;
     vote: Vote;
   } | null>(null);
+  const [pendingProposalVote, setPendingProposalVote] = useState<
+    "yes" | "no" | null
+  >(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -216,21 +219,7 @@ export default function App() {
               onHost={() => setDateOpen(true)}
               onPass={() => setPassOpen(true)}
               onVote={castMemberVote}
-              onProposalVote={async (name, vote) => {
-                const confirmed = window.confirm(
-                  `Cast ${vote === "yes" ? "Yes" : "No"} as ${name} for the schedule proposal?`,
-                );
-                if (!confirmed) return;
-                try {
-                  const res = await api.voteProposal(name, vote);
-                  setData(res.data);
-                  setError(null);
-                } catch (err) {
-                  setError(
-                    err instanceof Error ? err.message : "Proposal vote failed",
-                  );
-                }
-              }}
+              onCastProposalVote={(vote) => setPendingProposalVote(vote)}
               onShiftProposedDate={async (name, weeks) => {
                 const direction = weeks < 0 ? "earlier" : "later";
                 const confirmed = window.confirm(
@@ -406,6 +395,36 @@ export default function App() {
           setAdminOk(false);
         }}
         onConfirm={(password) => void handleAdminLogin(password)}
+      />
+
+      <Modal
+        open={pendingProposalVote !== null}
+        title={
+          pendingProposalVote === "yes"
+            ? "You agree with the proposal"
+            : "You disagree with the proposal"
+        }
+        message="Type your first name to record your vote."
+        mode="text"
+        placeholder="First name"
+        confirmLabel="Submit vote"
+        onCancel={() => setPendingProposalVote(null)}
+        onConfirm={async (firstName) => {
+          if (!firstName?.trim() || !pendingProposalVote) return;
+          try {
+            const res = await api.voteProposal(
+              firstName.trim(),
+              pendingProposalVote,
+            );
+            setData(res.data);
+            setPendingProposalVote(null);
+            setError(null);
+          } catch (err) {
+            setError(
+              err instanceof Error ? err.message : "Proposal vote failed",
+            );
+          }
+        }}
       />
 
       <Modal

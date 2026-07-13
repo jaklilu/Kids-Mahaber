@@ -427,6 +427,14 @@ img {
   margin-bottom: 1rem;
 }
 
+.proposal-summary .status-line {
+  margin-bottom: 0.55rem;
+}
+
+.proposal-summary .status-line:last-child {
+  margin-bottom: 0;
+}
+
 .proposal-progress {
   margin-bottom: 1rem;
 }
@@ -481,6 +489,61 @@ img {
   margin-top: 0.4rem;
 }
 
+.proposal-vote-cta {
+  text-align: center;
+  margin: 1rem 0 1.25rem;
+  padding: 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+}
+
+.proposal-vote-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.vote-btn.thumb.large {
+  width: 3.5rem;
+  height: 3.5rem;
+  font-size: 1.75rem;
+  border-radius: 16px;
+}
+
+.proposal-tally {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.proposal-tally-col h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--green-dark);
+}
+
+.proposal-name-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.proposal-name-list li {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .proposal-vote-cell {
   min-width: 5.5rem;
 }
@@ -526,6 +589,10 @@ img {
   .proposal-vote-cell {
     justify-content: flex-start;
     gap: 0.5rem;
+  }
+
+  .proposal-tally {
+    grid-template-columns: 1fr;
   }
 
   .hosted-date-label {
@@ -650,7 +717,8 @@ img {
 }
 
 .modal input[type="date"],
-.modal input[type="password"] {
+.modal input[type="password"],
+.modal input[type="text"] {
   width: 100%;
   padding: 0.8rem 0.9rem;
   border-radius: 14px;

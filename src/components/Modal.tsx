@@ -7,9 +7,10 @@ type Props = {
   confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (value?: string) => void;
-  mode?: "confirm" | "date" | "password";
+  mode?: "confirm" | "date" | "password" | "text";
   minDate?: string;
   initialDate?: string;
+  placeholder?: string;
 };
 
 export function Modal({
@@ -22,6 +23,7 @@ export function Modal({
   mode = "confirm",
   minDate,
   initialDate,
+  placeholder,
 }: Props) {
   const inputId = useId();
   const [value, setValue] = useState("");
@@ -66,6 +68,19 @@ export function Modal({
             type="password"
             value={value}
             placeholder="Admin password"
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onConfirm(value);
+            }}
+          />
+        )}
+        {mode === "text" && (
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            placeholder={placeholder || "First name"}
+            autoComplete="given-name"
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") onConfirm(value);

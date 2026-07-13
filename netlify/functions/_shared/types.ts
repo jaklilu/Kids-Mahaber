@@ -16,10 +16,9 @@ export interface HistoryEntry {
   round?: number;
 }
 
-export interface ScheduleProposalVote {
-  name: string;
-  photo: string;
-  vote: Vote;
+export interface ScheduleProposalResponse {
+  firstName: string;
+  vote: "yes" | "no";
 }
 
 export interface ScheduleProposal {
@@ -28,7 +27,7 @@ export interface ScheduleProposal {
   createdAt: string;
   adopted: boolean;
   threshold: number;
-  votes: ScheduleProposalVote[];
+  responses: ScheduleProposalResponse[];
 }
 
 export interface TrackerData {
