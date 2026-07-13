@@ -99,9 +99,6 @@ export function TrackerPanel({
 
       <div className="card">
         <h3 className="section-title">Family schedule</h3>
-        <p className="status-line" style={{ marginBottom: "0.75rem" }}>
-          Proposed hosting dates only — use −1 wk / +1 wk if your date needs adjusting.
-        </p>
         <div
           className="member-list-header member-list-header-schedule"
           aria-hidden="true"

@@ -417,6 +417,20 @@ img {
   border: 1px solid rgba(21, 148, 71, 0.25);
 }
 
+.proposal-tally-card {
+  border: 1px solid rgba(21, 148, 71, 0.18);
+}
+
+.proposal-tally-card .proposal-progress {
+  margin-bottom: 0.75rem;
+}
+
+.proposal-tally-card .status-line {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
 .proposal-header {
   display: flex;
   flex-wrap: wrap;
@@ -526,6 +540,20 @@ img {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.55);
   border: 1px solid var(--line);
+}
+
+.proposal-vote-cta-standalone {
+  margin: 0;
+  padding: 0.35rem 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.proposal-vote-card .status-line {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
 }
 
 .proposal-vote-buttons {
