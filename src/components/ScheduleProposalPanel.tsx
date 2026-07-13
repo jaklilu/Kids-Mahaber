@@ -9,20 +9,25 @@ import {
 type Props = {
   proposal: ScheduleProposal | null | undefined;
   familySize: number;
+  audience?: "adults" | "kids";
   onCastVote: (vote: "yes" | "no") => void;
 };
 
 export function ScheduleProposalPanel({
   proposal,
   familySize,
+  audience = "adults",
   onCastVote,
 }: Props) {
   if (!proposal) return null;
 
-  const stats = proposalStats(proposal, familySize);
+  const stats = proposalStats(proposal, familySize, audience);
   const percent = Math.round(stats.yesShare * 100);
   const barWidth = Math.min(100, percent);
   const votingOpen = isProposalVotingOpen(proposal);
+  const isKids = audience === "kids";
+  const tallyTitle = isKids ? "Children tally" : "Parents tally";
+  const groupLabel = isKids ? "children" : "parents";
 
   return (
     <div className="card proposal-card">
@@ -86,9 +91,12 @@ export function ScheduleProposalPanel({
       </div>
 
       <div className="proposal-progress">
+        <h3 className="section-title" style={{ marginBottom: "0.55rem" }}>
+          {tallyTitle}
+        </h3>
         <div className="proposal-progress-meta">
           <strong>{stats.yes}</strong> of <strong>{stats.familySize}</strong>{" "}
-          family members agree ({percent}%) — need more than 70% (
+          {groupLabel} agree ({percent}%) — need more than 70% (
           {stats.needed}+ 👍)
         </div>
         <div
@@ -106,7 +114,9 @@ export function ScheduleProposalPanel({
         </div>
         <p className="status-line">
           {stats.adopted
-            ? "More than 70% agreed — this is our new hosting process."
+            ? isKids
+              ? "More than 70% of children agreed with the process."
+              : "More than 70% agreed — this is our new hosting process."
             : `${stats.voted} vote(s) recorded · ${stats.no} 👎`}
         </p>
       </div>

@@ -37,9 +37,10 @@ export default function App() {
     name: string;
     vote: Vote;
   } | null>(null);
-  const [pendingProposalVote, setPendingProposalVote] = useState<
-    "yes" | "no" | null
-  >(null);
+  const [pendingProposalVote, setPendingProposalVote] = useState<{
+    vote: "yes" | "no";
+    audience: "adults" | "kids";
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -180,7 +181,7 @@ export default function App() {
     <div className="app-shell">
       <header className="brand-bar">
         <h1>Kids Mahaber</h1>
-        <p>Family hosting rotation, RSVP votes, and kids attendance — all in one place.</p>
+        <p>Family hosting rotation, RSVP votes, and children attendance — all in one place.</p>
       </header>
 
       <nav className="tabs" aria-label="Main">
@@ -189,7 +190,7 @@ export default function App() {
           className={`tab ${tab === "tracker" ? "active" : ""}`}
           onClick={() => void selectTab("tracker")}
         >
-          Tracker
+          Parents
         </button>
         <button
           type="button"
@@ -203,7 +204,7 @@ export default function App() {
           className={`tab ${tab === "kids" ? "active" : ""}`}
           onClick={() => void selectTab("kids")}
         >
-          Kids
+          Children
         </button>
       </nav>
 
@@ -219,7 +220,9 @@ export default function App() {
               onHost={() => setDateOpen(true)}
               onPass={() => setPassOpen(true)}
               onVote={castMemberVote}
-              onCastProposalVote={(vote) => setPendingProposalVote(vote)}
+              onCastProposalVote={(vote) =>
+                setPendingProposalVote({ vote, audience: "adults" })
+              }
               onShiftProposedDate={async (name, weeks) => {
                 const direction = weeks < 0 ? "earlier" : "later";
                 const confirmed = window.confirm(
@@ -326,7 +329,14 @@ export default function App() {
             />
           )}
           {tab === "kids" && (
-            <KidsPanel kids={kids} onVote={castKidVote} />
+            <KidsPanel
+              kids={kids}
+              proposal={data.scheduleProposal}
+              onRsvpVote={castKidVote}
+              onCastProposalVote={(vote) =>
+                setPendingProposalVote({ vote, audience: "kids" })
+              }
+            />
           )}
         </>
       )}
@@ -400,7 +410,7 @@ export default function App() {
       <Modal
         open={pendingProposalVote !== null}
         title={
-          pendingProposalVote === "yes"
+          pendingProposalVote?.vote === "yes"
             ? "You agree with the proposal"
             : "You disagree with the proposal"
         }
@@ -414,7 +424,8 @@ export default function App() {
           try {
             const res = await api.voteProposal(
               firstName.trim(),
-              pendingProposalVote,
+              pendingProposalVote.vote,
+              pendingProposalVote.audience,
             );
             setData(res.data);
             setPendingProposalVote(null);

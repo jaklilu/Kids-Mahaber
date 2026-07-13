@@ -29,6 +29,8 @@ export interface ScheduleProposal {
   adopted: boolean;
   threshold: number;
   responses: ScheduleProposalResponse[];
+  /** Temporary process votes from kids — remove after voting ends */
+  kidsResponses: ScheduleProposalResponse[];
 }
 
 export interface TrackerData {

@@ -14,8 +14,9 @@ export const PROPOSAL_DEADLINE_LABEL = "Wednesday, July 15, 2026 at 5:00 PM";
 
 export const PROPOSAL_SUMMARY = [
   "We propose a new hosting schedule:",
-  "Frea will host on the second Saturday, one month from now.",
+  "Frea will host on Saturday, one month from now.",
   "After that, hosting will rotate to the next person every three months, always on the second Saturday, following the established order.",
+  "Which means we will see each other every three months for sure.",
   "If the scheduled date does not work for a host, it may be moved one week earlier or one week later (−1 week or +1 week), as shown in the schedule table below.",
   "This vote is only to approve the hosting process. It is not a vote on any specific hosting date.",
   "If more than 70% of the family votes in favor, this will become our new hosting process.",
@@ -91,6 +92,9 @@ export function applyProposedSchedule(
   const previous = preserveResponses
     ? migrateLegacyVotes(data.scheduleProposal)
     : [];
+  const previousKids = preserveResponses
+    ? (data.scheduleProposal?.kidsResponses ?? [])
+    : [];
 
   const scheduleProposal: ScheduleProposal = {
     title: PROPOSAL_TITLE,
@@ -100,6 +104,7 @@ export function applyProposedSchedule(
     adopted: false,
     threshold: 0.7,
     responses: previous,
+    kidsResponses: previousKids,
   };
 
   const stats = proposalStats(scheduleProposal, members.length);
@@ -124,13 +129,15 @@ export function ensureScheduleProposal(data: TrackerData): TrackerData {
   if (
     data.scheduleProposal &&
     (!data.scheduleProposal.responses ||
-      data.scheduleProposal.responses.length !== responses.length)
+      data.scheduleProposal.responses.length !== responses.length ||
+      !Array.isArray(data.scheduleProposal.kidsResponses))
   ) {
     updated = {
       ...data,
       scheduleProposal: {
         ...data.scheduleProposal,
         responses,
+        kidsResponses: data.scheduleProposal.kidsResponses ?? [],
       },
     };
   }
@@ -148,6 +155,7 @@ export function ensureScheduleProposal(data: TrackerData): TrackerData {
         summary: PROPOSAL_SUMMARY,
         title: PROPOSAL_TITLE,
         deadlineAt: PROPOSAL_DEADLINE_AT,
+        kidsResponses: updated.scheduleProposal.kidsResponses ?? [],
       },
     };
   }
@@ -158,15 +166,22 @@ export function ensureScheduleProposal(data: TrackerData): TrackerData {
 export function proposalStats(
   proposal: ScheduleProposal | null | undefined,
   familySize: number,
+  audience: "adults" | "kids" = "adults",
 ) {
-  const responses = migrateLegacyVotes(proposal);
+  const responses =
+    audience === "kids"
+      ? (proposal?.kidsResponses ?? [])
+      : migrateLegacyVotes(proposal);
   const yes = responses.filter((r) => r.vote === "yes").length;
   const no = responses.filter((r) => r.vote === "no").length;
   const voted = yes + no;
   const threshold = proposal?.threshold ?? 0.7;
   const yesShare = familySize === 0 ? 0 : yes / familySize;
+  const meetsThreshold = familySize > 0 && yesShare > threshold;
   const adopted =
-    Boolean(proposal?.adopted) || (familySize > 0 && yesShare > threshold);
+    audience === "adults"
+      ? Boolean(proposal?.adopted) || meetsThreshold
+      : meetsThreshold;
   const needed = Math.floor(familySize * threshold) + 1;
 
   return {

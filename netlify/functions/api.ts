@@ -304,11 +304,13 @@ export const handler: Handler = async (event) => {
     }
 
     if (action === "proposal-vote" && event.httpMethod === "POST") {
-      const { firstName, vote } = parseBody<{
+      const { firstName, vote, audience } = parseBody<{
         firstName: string;
         vote: "yes" | "no";
+        audience?: "adults" | "kids";
       }>(event);
       const normalized = (firstName || "").trim();
+      const group = audience === "kids" ? "kids" : "adults";
       if (!normalized || (vote !== "yes" && vote !== "no")) {
         return json(400, { error: "firstName and vote required" });
       }
@@ -327,23 +329,35 @@ export const handler: Handler = async (event) => {
         });
       }
 
-      const responses = data.scheduleProposal.responses ?? [];
-      const key = normalized.toLowerCase();
-      if (responses.some((r) => r.firstName.toLowerCase() === key)) {
-        return json(400, { error: "That name already voted" });
+      if (group === "kids") {
+        const kidsResponses = data.scheduleProposal.kidsResponses ?? [];
+        const key = normalized.toLowerCase();
+        if (kidsResponses.some((r) => r.firstName.toLowerCase() === key)) {
+          return json(400, { error: "That name already voted" });
+        }
+        kidsResponses.push({ firstName: normalized, vote });
+        data.scheduleProposal.kidsResponses = kidsResponses;
+      } else {
+        const responses = data.scheduleProposal.responses ?? [];
+        const key = normalized.toLowerCase();
+        if (responses.some((r) => r.firstName.toLowerCase() === key)) {
+          return json(400, { error: "That name already voted" });
+        }
+        responses.push({ firstName: normalized, vote });
+        data.scheduleProposal.responses = responses;
+
+        const stats = proposalStats(
+          data.scheduleProposal,
+          data.members.length,
+          "adults",
+        );
+        data.scheduleProposal.adopted = stats.adopted;
       }
-
-      responses.push({ firstName: normalized, vote });
-      data.scheduleProposal.responses = responses;
-
-      const stats = proposalStats(data.scheduleProposal, data.members.length);
-      data.scheduleProposal.adopted = stats.adopted;
 
       await saveTracker(data);
       return json(200, {
         status: "success",
         data,
-        stats,
       });
     }
 

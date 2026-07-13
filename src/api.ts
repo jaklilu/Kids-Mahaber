@@ -81,10 +81,14 @@ export const api = {
       { method: "POST" },
       true,
     ),
-  voteProposal: (firstName: string, vote: "yes" | "no") =>
+  voteProposal: (
+    firstName: string,
+    vote: "yes" | "no",
+    audience: "adults" | "kids" = "adults",
+  ) =>
     request<{ status: string; data: TrackerData }>("proposal-vote", {
       method: "POST",
-      body: JSON.stringify({ firstName, vote }),
+      body: JSON.stringify({ firstName, vote, audience }),
     }),
   shiftProposedDate: (name: string, weeks: 1 | -1) =>
     request<{ status: string; data: TrackerData }>("shift-proposed-date", {

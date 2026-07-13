@@ -55,14 +55,18 @@ c:\Kids Mahaber\
 
 Private family tool to rotate who **hosts** the next gathering:
 
-1. **Tracker**
+1. **Parents** tab (route id still `tracker`)
    - **Current turn card temporarily hidden** (`showCurrentTurn = false` in `TrackerPanel.tsx`) — Host/Pass not shown while family votes on the process; set to `true` to restore
    - Family schedule table: **Member · Proposed date · Date hosted**
    - Proposed dates can shift with **−1 wk / +1 wk** under each proposed date
    - After someone hosts: member RSVP thumbs (👍/👎); buttons hide after vote
-   - **Separate proposal card** (not mixed with hosting) to vote on the new hosting *process*
+   - **Separate proposal card** (not mixed with hosting) to vote on the new hosting *process* — **Parents tally**
 2. **Admin** — password gate; reset member / reset all; reorder; clear history; change current host date; refresh proposed schedule
-3. **Kids** — attendance yes/no (confirm “is this you?”)
+3. **Children** tab (route id still `kids`)
+   - Temporary **process vote** card (same copy/flow as parents; `SHOW_KIDS_PROCESS_VOTE` in `KidsPanel.tsx`) — set `false` to remove after voting ends
+   - Separate **Coming / not coming** RSVP tally + per-child thumbs
+
+Tabs labeled **Parents · Admin · Children**.
 
 Auto-refresh every 10s while tab visible.
 
@@ -84,6 +88,7 @@ Kept **separate from hosting** so people don’t confuse thumbs with Host/Pass.
 
 - Title / summary: `PROPOSAL_TITLE` + `PROPOSAL_SUMMARY` in `src/schedule.ts` and `netlify/functions/_shared/schedule.ts`
 - Title: **Vote on the New Hosting Process**
+- Includes: Frea hosts on Saturday one month from now; rotate every three months on second Saturdays; “Which means we will see each other every three months for sure.”
 - Badge when open: **Open for Voting**
 - Under thumbs: “Please vote by Wednesday, July 15, 2026 at 5:00 PM. Voting closes after that.”
 - `ensureScheduleProposal()` rewrites stored title/summary/deadline when they differ from the constants (votes preserved)
@@ -92,14 +97,15 @@ Kept **separate from hosting** so people don’t confuse thumbs with Host/Pass.
 
 1. Dedicated card explains the process (paragraphs from `PROPOSAL_SUMMARY`)
 2. Large green 👍 / red 👎 (~4.5rem) → modal asks for **first name** (`Modal` `mode="text"`)
-3. Vote stored as `{ firstName, vote }` in `scheduleProposal.responses[]`
-4. Duplicate first names blocked (case-insensitive)
-5. Card shows progress toward **>70%** yes of family size, Agree/Disagree name tallies
+3. Parents: `{ firstName, vote }` in `scheduleProposal.responses[]` — drives **>70%** adoption
+4. Children: same flow into `scheduleProposal.kidsResponses[]` (does **not** flip `adopted`; separate Children tally)
+5. API: `POST /api/proposal-vote` with `{ firstName, vote, audience: "adults"|"kids" }`
+6. Duplicate first names blocked per audience (case-insensitive)
 
 ### Schedule rule (proposed dates)
 
-- Frea = second Saturday **one month** from baseline
-- Then every **3 months**, second Saturday, in member order
+- Default builder: Frea = second Saturday **one month** from baseline, then every **3 months** second Saturday
+- Local/prod may have Frea shifted to **2026-08-15** via `shift-proposed-date` (+1 wk); regenerating schedule rebuilds defaults
 - Hosts may shift one week earlier/later via `POST /api/shift-proposed-date`
 
 ### Admin
@@ -163,7 +169,7 @@ See `.env.example`.
 | POST | `/api/update-host-date` | Admin; `{ memberIndex, date }` change gathering date |
 | POST | `/api/generate-schedule` | Admin; rebuild proposed dates + reset proposal votes |
 | POST | `/api/shift-proposed-date` | `{ name, weeks: 1 \| -1 }` |
-| POST | `/api/proposal-vote` | `{ firstName, vote: "yes"\|"no" }` — process vote + tally |
+| POST | `/api/proposal-vote` | `{ firstName, vote: "yes"\|"no", audience?: "adults"\|"kids" }` — process vote + tally |
 | POST | `/api/reset` | Admin; clears member status **and** that member’s history rows |
 | POST | `/api/reset-all` | Admin; clears statuses + kids votes (keeps history) |
 | POST | `/api/clear-history` | Admin |
@@ -184,7 +190,8 @@ Admin mutating routes require header: `x-admin-password: <ADMIN_PASSWORD>`.
 - `passStartIndex`, `currentRoundPassers`, `hostConfirmed`, `lastHostIndex`
 - `scheduleProposal?`:
   - `title`, `summary`, `createdAt`, `deadlineAt`, `adopted`, `threshold` (0.7)
-  - `responses[]`: `{ firstName, vote: "yes"|"no" }`
+  - `responses[]`: parent process votes `{ firstName, vote }`
+  - `kidsResponses[]`: child process votes (temporary; remove after vote closes)
 
 **Kids** (`KidsData`): `kids[]` with `name`, `photo` (`/kids/Name.jpg`), `vote`
 
@@ -300,9 +307,10 @@ cd kids-mahaber
 npm run dev
 # open http://localhost:8889
 # Admin password: change-me
-# Tracker: proposal card (deadline + green/red thumbs) + schedule −1/+1 wk
+# Parents: proposal card (deadline + green/red thumbs) + schedule −1/+1 wk
 # Current turn Host/Pass hidden until showCurrentTurn = true
-# Proposal: thumb → first name → Agree/Disagree tally; closed after Wed Jul 15 5pm PT
+# Children: process vote (SHOW_KIDS_PROCESS_VOTE) + Coming/not coming RSVP
+# Proposal: thumb → first name → Parents/Children tally; closed after Wed Jul 15 5pm PT
 curl http://localhost:8889/api/health
 curl http://localhost:8889/api/data
 curl http://localhost:8889/api/kids
