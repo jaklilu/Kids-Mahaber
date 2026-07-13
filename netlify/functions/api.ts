@@ -2,6 +2,8 @@ import type { Handler, HandlerEvent } from "@netlify/functions";
 import { sendHostEmail } from "./_shared/email";
 import {
   applyProposedSchedule,
+  isProposalVotingOpen,
+  PROPOSAL_DEADLINE_LABEL,
   proposalStats,
   shiftIsoDateByWeeks,
 } from "./_shared/schedule";
@@ -317,6 +319,12 @@ export const handler: Handler = async (event) => {
       }
       if (!data.scheduleProposal) {
         return json(500, { error: "Proposal not initialized" });
+      }
+
+      if (!isProposalVotingOpen(data.scheduleProposal)) {
+        return json(400, {
+          error: `Voting closed after ${PROPOSAL_DEADLINE_LABEL}`,
+        });
       }
 
       const responses = data.scheduleProposal.responses ?? [];

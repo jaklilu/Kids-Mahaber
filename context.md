@@ -56,7 +56,7 @@ c:\Kids Mahaber\
 Private family tool to rotate who **hosts** the next gathering:
 
 1. **Tracker**
-   - Current turn card: **I Will Host** (pick date) / **I Will Pass**
+   - **Current turn card temporarily hidden** (`showCurrentTurn = false` in `TrackerPanel.tsx`) — Host/Pass not shown while family votes on the process; set to `true` to restore
    - Family schedule table: **Member · Proposed date · Date hosted**
    - Proposed dates can shift with **−1 wk / +1 wk** under each proposed date
    - After someone hosts: member RSVP thumbs (👍/👎); buttons hide after vote
@@ -72,17 +72,26 @@ Auto-refresh every 10s while tab visible.
 
 Kept **separate from hosting** so people don’t confuse thumbs with Host/Pass.
 
+### Deadline
+
+- Closes **Wednesday, July 15, 2026 at 5:00 PM** Pacific
+- Constants: `PROPOSAL_DEADLINE_AT` (`2026-07-15T17:00:00-07:00`) + `PROPOSAL_DEADLINE_LABEL` in `src/schedule.ts` / `_shared/schedule.ts`
+- Stored on proposal as `deadlineAt`; synced by `ensureScheduleProposal()`
+- UI: deadline line under title; note under thumbs; badge **Voting Closed** after deadline; thumbs hidden
+- API rejects `proposal-vote` after deadline via `isProposalVotingOpen()`
+
 ### Copy (source of truth)
 
 - Title / summary: `PROPOSAL_TITLE` + `PROPOSAL_SUMMARY` in `src/schedule.ts` and `netlify/functions/_shared/schedule.ts`
 - Title: **Vote on the New Hosting Process**
 - Badge when open: **Open for Voting**
-- `ensureScheduleProposal()` rewrites stored title/summary when they differ from the constants (votes preserved)
+- Under thumbs: “Please vote by Wednesday, July 15, 2026 at 5:00 PM. Voting closes after that.”
+- `ensureScheduleProposal()` rewrites stored title/summary/deadline when they differ from the constants (votes preserved)
 
 ### Vote UX
 
 1. Dedicated card explains the process (paragraphs from `PROPOSAL_SUMMARY`)
-2. Large 👍 / 👎 → modal asks for **first name** (`Modal` `mode="text"`)
+2. Large green 👍 / red 👎 (~4.5rem) → modal asks for **first name** (`Modal` `mode="text"`)
 3. Vote stored as `{ firstName, vote }` in `scheduleProposal.responses[]`
 4. Duplicate first names blocked (case-insensitive)
 5. Card shows progress toward **>70%** yes of family size, Agree/Disagree name tallies
@@ -174,7 +183,7 @@ Admin mutating routes require header: `x-admin-password: <ADMIN_PASSWORD>`.
 - `history[]`: `{ name, date }` (ISO `YYYY-MM-DD` preferred)
 - `passStartIndex`, `currentRoundPassers`, `hostConfirmed`, `lastHostIndex`
 - `scheduleProposal?`:
-  - `title`, `summary`, `createdAt`, `adopted`, `threshold` (0.7)
+  - `title`, `summary`, `createdAt`, `deadlineAt`, `adopted`, `threshold` (0.7)
   - `responses[]`: `{ firstName, vote: "yes"|"no" }`
 
 **Kids** (`KidsData`): `kids[]` with `name`, `photo` (`/kids/Name.jpg`), `vote`
@@ -196,6 +205,8 @@ Seed members/photos: `netlify/functions/_shared/seed.ts` (adult ImgBB URLs; kids
 - Date hosted column **centered** in each member row
 - Glass-style white cards over the colorful background
 - Process vote lives in **`ScheduleProposalPanel`** only — **not** in the schedule table columns
+- Proposal thumbs: **green** yes / **red** no, enlarged (~4.5rem)
+- Current turn Host/Pass currently **hidden** (`showCurrentTurn = false`)
 
 Main styles: `src/index.css`
 
@@ -289,8 +300,9 @@ cd kids-mahaber
 npm run dev
 # open http://localhost:8889
 # Admin password: change-me
-# Tracker: proposal card (Open for Voting) + Host/Pass + schedule −1/+1 wk
-# Proposal: thumb → first name → appears in Agree/Disagree tally
+# Tracker: proposal card (deadline + green/red thumbs) + schedule −1/+1 wk
+# Current turn Host/Pass hidden until showCurrentTurn = true
+# Proposal: thumb → first name → Agree/Disagree tally; closed after Wed Jul 15 5pm PT
 curl http://localhost:8889/api/health
 curl http://localhost:8889/api/data
 curl http://localhost:8889/api/kids

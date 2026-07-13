@@ -25,6 +25,7 @@ export interface ScheduleProposal {
   title: string;
   summary: string;
   createdAt: string;
+  deadlineAt: string;
   adopted: boolean;
   threshold: number;
   responses: ScheduleProposalResponse[];

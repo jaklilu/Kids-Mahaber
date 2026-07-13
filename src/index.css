@@ -423,8 +423,22 @@ img {
   margin-bottom: 0;
 }
 
+.proposal-deadline {
+  margin: 0 0 0.85rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .proposal-summary {
   margin-bottom: 1rem;
+}
+
+.proposal-deadline {
+  margin: 0 0 0.85rem;
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .proposal-summary .status-line {
@@ -506,10 +520,30 @@ img {
 }
 
 .vote-btn.thumb.large {
-  width: 3.5rem;
-  height: 3.5rem;
-  font-size: 1.75rem;
-  border-radius: 16px;
+  width: 4.5rem;
+  height: 4.5rem;
+  font-size: 2.15rem;
+  border-radius: 18px;
+}
+
+.vote-btn.thumb.yes {
+  background: var(--green);
+  border-color: var(--green-dark);
+  color: #fff;
+}
+
+.vote-btn.thumb.yes:hover:not(:disabled) {
+  background: var(--green-dark);
+}
+
+.vote-btn.thumb.no {
+  background: var(--red);
+  border-color: #b91c1c;
+  color: #fff;
+}
+
+.vote-btn.thumb.no:hover:not(:disabled) {
+  background: #b91c1c;
 }
 
 .proposal-tally {

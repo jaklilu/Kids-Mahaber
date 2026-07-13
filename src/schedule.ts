@@ -8,6 +8,10 @@ import type {
 
 export const PROPOSAL_TITLE = "Vote on the New Hosting Process";
 
+/** Wednesday, July 15, 2026, 5:00 PM Pacific */
+export const PROPOSAL_DEADLINE_AT = "2026-07-15T17:00:00-07:00";
+export const PROPOSAL_DEADLINE_LABEL = "Wednesday, July 15, 2026 at 5:00 PM";
+
 export const PROPOSAL_SUMMARY = [
   "We propose a new hosting schedule:",
   "Frea will host on the second Saturday, one month from now.",
@@ -16,6 +20,14 @@ export const PROPOSAL_SUMMARY = [
   "This vote is only to approve the hosting process. It is not a vote on any specific hosting date.",
   "If more than 70% of the family votes in favor, this will become our new hosting process.",
 ].join("\n\n");
+
+export function isProposalVotingOpen(
+  proposal: ScheduleProposal | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  const deadline = proposal?.deadlineAt || PROPOSAL_DEADLINE_AT;
+  return now.getTime() <= new Date(deadline).getTime();
+}
 
 export function secondSaturdayOfMonth(year: number, monthIndex: number): Date {
   const first = new Date(year, monthIndex, 1);
@@ -84,6 +96,7 @@ export function applyProposedSchedule(
     title: PROPOSAL_TITLE,
     summary: PROPOSAL_SUMMARY,
     createdAt: toIsoDate(from),
+    deadlineAt: PROPOSAL_DEADLINE_AT,
     adopted: false,
     threshold: 0.7,
     responses: previous,

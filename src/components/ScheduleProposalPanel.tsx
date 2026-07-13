@@ -1,6 +1,10 @@
 import type { ScheduleProposal } from "../types";
 import { formatDate } from "../utils";
-import { proposalStats } from "../schedule";
+import {
+  isProposalVotingOpen,
+  PROPOSAL_DEADLINE_LABEL,
+  proposalStats,
+} from "../schedule";
 
 type Props = {
   proposal: ScheduleProposal | null | undefined;
@@ -18,6 +22,7 @@ export function ScheduleProposalPanel({
   const stats = proposalStats(proposal, familySize);
   const percent = Math.round(stats.yesShare * 100);
   const barWidth = Math.min(100, percent);
+  const votingOpen = isProposalVotingOpen(proposal);
 
   return (
     <div className="card proposal-card">
@@ -25,10 +30,16 @@ export function ScheduleProposalPanel({
         <h3 className="section-title">{proposal.title}</h3>
         {stats.adopted ? (
           <span className="badge">Adopted</span>
-        ) : (
+        ) : votingOpen ? (
           <span className="badge warn">Open for Voting</span>
+        ) : (
+          <span className="badge">Voting Closed</span>
         )}
       </div>
+
+      <p className="proposal-deadline">
+        Deadline: <strong>{PROPOSAL_DEADLINE_LABEL}</strong>
+      </p>
 
       <div className="proposal-summary">
         {proposal.summary.split(/\n\n+/).map((paragraph) => (
@@ -39,28 +50,39 @@ export function ScheduleProposalPanel({
       </div>
 
       <div className="proposal-vote-cta">
-        <p className="please-vote">Please Vote</p>
-        <div className="proposal-vote-buttons">
-          <button
-            type="button"
-            className="vote-btn thumb yes large"
-            onClick={() => onCastVote("yes")}
-            aria-label="Agree with proposal"
-          >
-            👍
-          </button>
-          <button
-            type="button"
-            className="vote-btn thumb no large"
-            onClick={() => onCastVote("no")}
-            aria-label="Disagree with proposal"
-          >
-            👎
-          </button>
-        </div>
-        <p className="status-line">
-          Tap a thumb, then type your first name to record your vote.
+        <p className="please-vote">
+          {votingOpen ? "Please Vote" : "Voting has closed"}
         </p>
+        {votingOpen ? (
+          <>
+            <div className="proposal-vote-buttons">
+              <button
+                type="button"
+                className="vote-btn thumb yes large"
+                onClick={() => onCastVote("yes")}
+                aria-label="Agree with proposal"
+              >
+                👍
+              </button>
+              <button
+                type="button"
+                className="vote-btn thumb no large"
+                onClick={() => onCastVote("no")}
+                aria-label="Disagree with proposal"
+              >
+                👎
+              </button>
+            </div>
+            <p className="status-line">
+              Please vote by {PROPOSAL_DEADLINE_LABEL}. Voting closes after that.
+            </p>
+          </>
+        ) : (
+          <p className="status-line">
+            The deadline was {PROPOSAL_DEADLINE_LABEL}. New votes are no longer
+            accepted.
+          </p>
+        )}
       </div>
 
       <div className="proposal-progress">
