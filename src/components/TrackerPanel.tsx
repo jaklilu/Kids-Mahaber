@@ -113,7 +113,6 @@ export function TrackerPanel({
           <MemberRow
             key={member.name}
             member={member}
-            history={data.history ?? []}
             showRsvpVotes={
               hostConfirmed &&
               !member.isCurrent &&

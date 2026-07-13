@@ -1,9 +1,8 @@
-import type { HistoryEntry, Member, Vote } from "../types";
+import type { Member, Vote } from "../types";
 import { formatDate } from "../utils";
 
 type Props = {
   member: Member;
-  history: HistoryEntry[];
   showRsvpVotes: boolean;
   onRsvpVote: (vote: Vote) => void;
   onShiftProposedDate: (weeks: 1 | -1) => void;
