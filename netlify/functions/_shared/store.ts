@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { ensureScheduleProposal } from "./schedule";
 import { defaultKids, defaultTracker } from "./seed";
 import type { KidsData, TrackerData } from "./types";
 
@@ -94,7 +95,11 @@ export async function getTracker(): Promise<TrackerData> {
     await setJson(TRACKER_KEY, seed);
     return seed;
   }
-  return data;
+  const withSchedule = ensureScheduleProposal(data);
+  if (withSchedule !== data) {
+    await setJson(TRACKER_KEY, withSchedule);
+  }
+  return withSchedule;
 }
 
 export async function saveTracker(data: TrackerData): Promise<void> {

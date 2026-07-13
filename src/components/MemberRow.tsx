@@ -1,5 +1,6 @@
 import type { HistoryEntry, Member, Vote } from "../types";
 import { displayHostedDate, getLastHostedDate } from "../hosting";
+import { formatDate } from "../utils";
 
 type Props = {
   member: Member;
@@ -10,9 +11,12 @@ type Props = {
 
 export function MemberRow({ member, history, showVotes, onVote }: Props) {
   const hostedDate = getLastHostedDate(member, history);
+  const proposed = member.proposedDate
+    ? formatDate(member.proposedDate)
+    : "—";
 
   return (
-    <div className="member-row">
+    <div className="member-row member-row-schedule">
       <div className="person">
         <img
           className="avatar"
@@ -54,6 +58,14 @@ export function MemberRow({ member, history, showVotes, onVote }: Props) {
             </div>
           )}
         </div>
+      </div>
+      <div className="hosted-date-cell proposed-date-cell">
+        <span className="hosted-date-label">Proposed</span>
+        <span
+          className={`hosted-date-value ${member.proposedDate ? "" : "empty"}`}
+        >
+          {proposed}
+        </span>
       </div>
       <div className="hosted-date-cell">
         <span className="hosted-date-label">Hosted</span>

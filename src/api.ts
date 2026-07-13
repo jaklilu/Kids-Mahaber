@@ -75,6 +75,17 @@ export const api = {
       { method: "POST", body: JSON.stringify({ index, date }) },
       true,
     ),
+  generateSchedule: () =>
+    request<{ status: string; data: TrackerData }>(
+      "generate-schedule",
+      { method: "POST" },
+      true,
+    ),
+  voteProposal: (name: string, vote: Vote) =>
+    request<{ status: string; data: TrackerData }>("proposal-vote", {
+      method: "POST",
+      body: JSON.stringify({ name, vote }),
+    }),
   getKids: () => request<KidsData>("kids"),
   voteKid: (name: string, vote: Vote) =>
     request<{ success: boolean }>("kids/vote", {

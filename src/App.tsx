@@ -216,6 +216,21 @@ export default function App() {
               onHost={() => setDateOpen(true)}
               onPass={() => setPassOpen(true)}
               onVote={castMemberVote}
+              onProposalVote={async (name, vote) => {
+                const confirmed = window.confirm(
+                  `Cast ${vote === "yes" ? "Yes" : "No"} as ${name} for the schedule proposal?`,
+                );
+                if (!confirmed) return;
+                try {
+                  const res = await api.voteProposal(name, vote);
+                  setData(res.data);
+                  setError(null);
+                } catch (err) {
+                  setError(
+                    err instanceof Error ? err.message : "Proposal vote failed",
+                  );
+                }
+              }}
             />
           )}
           {tab === "admin" && adminOk && (
@@ -262,6 +277,26 @@ export default function App() {
               }}
               onMove={moveMember}
               onChangeHostDate={(index) => setChangeDateIndex(index)}
+              onGenerateSchedule={async () => {
+                if (
+                  !window.confirm(
+                    "Rebuild proposed second-Saturday dates and reset proposal votes?",
+                  )
+                ) {
+                  return;
+                }
+                try {
+                  const res = await api.generateSchedule();
+                  setData(res.data);
+                  setError(null);
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : "Could not generate schedule",
+                  );
+                }
+              }}
               onDeleteHistory={deleteHistory}
             />
           )}

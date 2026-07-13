@@ -6,6 +6,7 @@ export interface Member {
   status: "" | "Hosting" | "Passed";
   isCurrent: boolean;
   hostingDate: string;
+  proposedDate?: string;
   vote: Vote;
 }
 
@@ -15,6 +16,21 @@ export interface HistoryEntry {
   round?: number;
 }
 
+export interface ScheduleProposalVote {
+  name: string;
+  photo: string;
+  vote: Vote;
+}
+
+export interface ScheduleProposal {
+  title: string;
+  summary: string;
+  createdAt: string;
+  adopted: boolean;
+  threshold: number;
+  votes: ScheduleProposalVote[];
+}
+
 export interface TrackerData {
   members: Member[];
   history: HistoryEntry[];
@@ -22,6 +38,7 @@ export interface TrackerData {
   currentRoundPassers: number[];
   hostConfirmed: boolean;
   lastHostIndex: number;
+  scheduleProposal?: ScheduleProposal | null;
 }
 
 export interface Kid {

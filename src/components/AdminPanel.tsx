@@ -8,6 +8,7 @@ type Props = {
   onClearHistory: () => void;
   onResetMember: (index: number) => void;
   onChangeHostDate: (index: number) => void;
+  onGenerateSchedule: () => void;
   onMove: (index: number, direction: "up" | "down") => void;
   onDeleteHistory: (index: number) => void;
 };
@@ -18,6 +19,7 @@ export function AdminPanel({
   onClearHistory,
   onResetMember,
   onChangeHostDate,
+  onGenerateSchedule,
   onMove,
   onDeleteHistory,
 }: Props) {
@@ -36,20 +38,32 @@ export function AdminPanel({
           >
             Clear history
           </button>
+          <button
+            type="button"
+            className="btn btn-host"
+            onClick={onGenerateSchedule}
+          >
+            Refresh proposed schedule
+          </button>
         </div>
+        <p className="status-line">
+          Refresh rebuilds second-Saturday dates (Frea next month, then every 3
+          months) and resets proposal votes.
+        </p>
       </div>
 
       <div className="card">
         <h2 className="section-title">Member order</h2>
-        <div className="member-list-header" aria-hidden="true">
+        <div className="member-list-header member-list-header-schedule" aria-hidden="true">
           <span>Member</span>
+          <span>Proposed date</span>
           <span>Date hosted</span>
         </div>
         {data.members.map((member, index) => {
           const hostedDate = getLastHostedDate(member, data.history ?? []);
           const isHosting = member.status === "Hosting" && Boolean(member.hostingDate);
           return (
-            <div className="member-row" key={member.name}>
+            <div className="member-row member-row-schedule" key={member.name}>
               <div className="person">
                 <img
                   className="avatar"
@@ -105,6 +119,16 @@ export function AdminPanel({
                     )}
                   </div>
                 </div>
+              </div>
+              <div className="hosted-date-cell proposed-date-cell">
+                <span className="hosted-date-label">Proposed</span>
+                <span
+                  className={`hosted-date-value ${member.proposedDate ? "" : "empty"}`}
+                >
+                  {member.proposedDate
+                    ? formatDate(member.proposedDate)
+                    : "—"}
+                </span>
               </div>
               <div className="hosted-date-cell">
                 <span className="hosted-date-label">Hosted</span>

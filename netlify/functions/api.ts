@@ -1,5 +1,9 @@
 import type { Handler, HandlerEvent } from "@netlify/functions";
 import { sendHostEmail } from "./_shared/email";
+import {
+  applyProposedSchedule,
+  proposalStats,
+} from "./_shared/schedule";
 import { getKids, getTracker, saveKids, saveTracker } from "./_shared/store";
 import type { TrackerData } from "./_shared/types";
 
@@ -268,6 +272,43 @@ export const handler: Handler = async (event) => {
       data.history = [];
       await saveTracker(data);
       return json(200, { status: "success", data });
+    }
+
+    if (action === "generate-schedule" && event.httpMethod === "POST") {
+      if (!requireAdmin(event)) return json(401, { error: "Unauthorized" });
+      const current = await getTracker();
+      const next = applyProposedSchedule(current, new Date(), false);
+      await saveTracker(next);
+      return json(200, { status: "success", data: next });
+    }
+
+    if (action === "proposal-vote" && event.httpMethod === "POST") {
+      const { name, vote } = parseBody<{ name: string; vote: "yes" | "no" }>(
+        event,
+      );
+      if (!name || (vote !== "yes" && vote !== "no")) {
+        return json(400, { error: "name and vote required" });
+      }
+
+      const data = await getTracker();
+      if (!data.scheduleProposal) {
+        Object.assign(data, applyProposedSchedule(data, new Date(), true));
+      }
+      const ballot = data.scheduleProposal?.votes.find((v) => v.name === name);
+      if (!ballot) return json(404, { error: "Voter not found" });
+
+      ballot.vote = vote;
+      const stats = proposalStats(data.scheduleProposal);
+      if (data.scheduleProposal) {
+        data.scheduleProposal.adopted = stats.yesShare > stats.threshold;
+      }
+
+      await saveTracker(data);
+      return json(200, {
+        status: "success",
+        data,
+        stats,
+      });
     }
 
     if (action === "kids" && event.httpMethod === "GET") {

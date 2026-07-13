@@ -1,7 +1,8 @@
 import type { KidsData, TrackerData } from "./types";
+import { applyProposedSchedule } from "./schedule";
 
 /** Initial seed matching the live PythonAnywhere roster (photos via ImgBB / local kids). */
-export const defaultTracker: TrackerData = {
+const baseTracker: TrackerData = {
   members: [
     {
       name: "Frea",
@@ -93,6 +94,9 @@ export const defaultTracker: TrackerData = {
   hostConfirmed: false,
   lastHostIndex: -1,
 };
+
+/** Seed includes Frea = second Saturday one month out, then +3 months each. */
+export const defaultTracker: TrackerData = applyProposedSchedule(baseTracker);
 
 export const defaultKids: KidsData = {
   kids: [

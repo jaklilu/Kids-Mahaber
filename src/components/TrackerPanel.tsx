@@ -1,12 +1,14 @@
 import type { Member, TrackerData, Vote } from "../types";
 import { formatDate, isDatePassed } from "../utils";
 import { MemberRow } from "./MemberRow";
+import { ScheduleProposalPanel } from "./ScheduleProposalPanel";
 
 type Props = {
   data: TrackerData;
   onHost: () => void;
   onPass: () => void;
   onVote: (index: number, vote: Vote) => void;
+  onProposalVote: (name: string, vote: Vote) => void;
 };
 
 function canInteract(data: TrackerData | null | undefined, current: Member | undefined): boolean {
@@ -16,7 +18,13 @@ function canInteract(data: TrackerData | null | undefined, current: Member | und
   return true;
 }
 
-export function TrackerPanel({ data, onHost, onPass, onVote }: Props) {
+export function TrackerPanel({
+  data,
+  onHost,
+  onPass,
+  onVote,
+  onProposalVote,
+}: Props) {
   const members = data?.members ?? [];
   const current = members.find((m) => m.isCurrent);
   const currentIndex = members.findIndex((m) => m.isCurrent);
@@ -43,6 +51,10 @@ export function TrackerPanel({ data, onHost, onPass, onVote }: Props) {
                 {current.status === "Hosting" && current.hostingDate ? (
                   <p className="status-line">
                     Hosting on {formatDate(current.hostingDate)}
+                  </p>
+                ) : current.proposedDate ? (
+                  <p className="status-line">
+                    Proposed: {formatDate(current.proposedDate)}
                   </p>
                 ) : (
                   <p className="status-line">Ready to host or pass</p>
@@ -73,10 +85,19 @@ export function TrackerPanel({ data, onHost, onPass, onVote }: Props) {
         )}
       </div>
 
+      <ScheduleProposalPanel
+        proposal={data.scheduleProposal}
+        onVote={onProposalVote}
+      />
+
       <div className="card">
         <h3 className="section-title">Family</h3>
-        <div className="member-list-header" aria-hidden="true">
+        <div
+          className="member-list-header member-list-header-schedule"
+          aria-hidden="true"
+        >
           <span>Member</span>
+          <span>Proposed date</span>
           <span>Date hosted</span>
         </div>
         {members.map((member, index) => (
