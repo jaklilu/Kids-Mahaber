@@ -360,6 +360,19 @@ img {
   color: #145789;
 }
 
+.week-shift-row {
+  display: flex;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  justify-content: center;
+}
+
+.week-shift-btn {
+  padding: 0.25rem 0.45rem !important;
+  font-size: 0.72rem !important;
+  min-height: 0;
+}
+
 .hosted-date-label {
   display: none;
   font-size: 0.68rem;

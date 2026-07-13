@@ -9,6 +9,7 @@ type Props = {
   onPass: () => void;
   onVote: (index: number, vote: Vote) => void;
   onProposalVote: (name: string, vote: Vote) => void;
+  onShiftProposedDate: (name: string, weeks: 1 | -1) => void;
 };
 
 function canInteract(data: TrackerData | null | undefined, current: Member | undefined): boolean {
@@ -24,6 +25,7 @@ export function TrackerPanel({
   onPass,
   onVote,
   onProposalVote,
+  onShiftProposedDate,
 }: Props) {
   const members = data?.members ?? [];
   const current = members.find((m) => m.isCurrent);
@@ -111,6 +113,9 @@ export function TrackerPanel({
               member.status !== "Hosting"
             }
             onVote={(vote) => onVote(index, vote)}
+            onShiftProposedDate={(weeks) =>
+              onShiftProposedDate(member.name, weeks)
+            }
           />
         ))}
       </div>

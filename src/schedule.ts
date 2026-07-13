@@ -92,3 +92,11 @@ export function proposalStats(proposal: ScheduleProposal | null | undefined) {
 
   return { total, yes, no, pending, yesShare, adopted, needed, threshold };
 }
+
+/** Shift an ISO date by whole weeks (e.g. -1 or +1). */
+export function shiftIsoDateByWeeks(isoDate: string, weeks: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + weeks * 7);
+  return toIsoDate(date);
+}

@@ -231,6 +231,24 @@ export default function App() {
                   );
                 }
               }}
+              onShiftProposedDate={async (name, weeks) => {
+                const direction = weeks < 0 ? "earlier" : "later";
+                const confirmed = window.confirm(
+                  `Move ${name}'s proposed date one week ${direction}?`,
+                );
+                if (!confirmed) return;
+                try {
+                  const res = await api.shiftProposedDate(name, weeks);
+                  setData(res.data);
+                  setError(null);
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : "Could not adjust proposed date",
+                  );
+                }
+              }}
             />
           )}
           {tab === "admin" && adminOk && (
@@ -294,6 +312,24 @@ export default function App() {
                     err instanceof Error
                       ? err.message
                       : "Could not generate schedule",
+                  );
+                }
+              }}
+              onShiftProposedDate={async (name, weeks) => {
+                const direction = weeks < 0 ? "earlier" : "later";
+                const confirmed = window.confirm(
+                  `Move ${name}'s proposed date one week ${direction}?`,
+                );
+                if (!confirmed) return;
+                try {
+                  const res = await api.shiftProposedDate(name, weeks);
+                  setData(res.data);
+                  setError(null);
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : "Could not adjust proposed date",
                   );
                 }
               }}

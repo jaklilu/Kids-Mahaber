@@ -86,6 +86,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ name, vote }),
     }),
+  shiftProposedDate: (name: string, weeks: 1 | -1) =>
+    request<{ status: string; data: TrackerData }>("shift-proposed-date", {
+      method: "POST",
+      body: JSON.stringify({ name, weeks }),
+    }),
   getKids: () => request<KidsData>("kids"),
   voteKid: (name: string, vote: Vote) =>
     request<{ success: boolean }>("kids/vote", {

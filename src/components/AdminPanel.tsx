@@ -9,6 +9,7 @@ type Props = {
   onResetMember: (index: number) => void;
   onChangeHostDate: (index: number) => void;
   onGenerateSchedule: () => void;
+  onShiftProposedDate: (name: string, weeks: 1 | -1) => void;
   onMove: (index: number, direction: "up" | "down") => void;
   onDeleteHistory: (index: number) => void;
 };
@@ -20,6 +21,7 @@ export function AdminPanel({
   onResetMember,
   onChangeHostDate,
   onGenerateSchedule,
+  onShiftProposedDate,
   onMove,
   onDeleteHistory,
 }: Props) {
@@ -129,6 +131,24 @@ export function AdminPanel({
                     ? formatDate(member.proposedDate)
                     : "—"}
                 </span>
+                {member.proposedDate ? (
+                  <div className="week-shift-row">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm week-shift-btn"
+                      onClick={() => onShiftProposedDate(member.name, -1)}
+                    >
+                      −1 wk
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm week-shift-btn"
+                      onClick={() => onShiftProposedDate(member.name, 1)}
+                    >
+                      +1 wk
+                    </button>
+                  </div>
+                ) : null}
               </div>
               <div className="hosted-date-cell">
                 <span className="hosted-date-label">Hosted</span>

@@ -3,6 +3,7 @@ import { sendHostEmail } from "./_shared/email";
 import {
   applyProposedSchedule,
   proposalStats,
+  shiftIsoDateByWeeks,
 } from "./_shared/schedule";
 import { getKids, getTracker, saveKids, saveTracker } from "./_shared/store";
 import type { TrackerData } from "./_shared/types";
@@ -280,6 +281,24 @@ export const handler: Handler = async (event) => {
       const next = applyProposedSchedule(current, new Date(), false);
       await saveTracker(next);
       return json(200, { status: "success", data: next });
+    }
+
+    if (action === "shift-proposed-date" && event.httpMethod === "POST") {
+      const { name, weeks } = parseBody<{ name: string; weeks: number }>(event);
+      if (!name || (weeks !== 1 && weeks !== -1)) {
+        return json(400, { error: "name and weeks (+1 or -1) required" });
+      }
+
+      const data = await getTracker();
+      const member = data.members.find((m) => m.name === name);
+      if (!member) return json(404, { error: "Member not found" });
+      if (!member.proposedDate) {
+        return json(400, { error: "No proposed date to adjust" });
+      }
+
+      member.proposedDate = shiftIsoDateByWeeks(member.proposedDate, weeks);
+      await saveTracker(data);
+      return json(200, { status: "success", data });
     }
 
     if (action === "proposal-vote" && event.httpMethod === "POST") {

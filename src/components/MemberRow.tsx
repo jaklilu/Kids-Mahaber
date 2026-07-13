@@ -7,9 +7,16 @@ type Props = {
   history: HistoryEntry[];
   showVotes: boolean;
   onVote: (vote: Vote) => void;
+  onShiftProposedDate: (weeks: 1 | -1) => void;
 };
 
-export function MemberRow({ member, history, showVotes, onVote }: Props) {
+export function MemberRow({
+  member,
+  history,
+  showVotes,
+  onVote,
+  onShiftProposedDate,
+}: Props) {
   const hostedDate = getLastHostedDate(member, history);
   const proposed = member.proposedDate
     ? formatDate(member.proposedDate)
@@ -66,6 +73,28 @@ export function MemberRow({ member, history, showVotes, onVote }: Props) {
         >
           {proposed}
         </span>
+        {member.proposedDate ? (
+          <div className="week-shift-row">
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm week-shift-btn"
+              onClick={() => onShiftProposedDate(-1)}
+              title="One week earlier"
+              aria-label={`${member.name} one week earlier`}
+            >
+              −1 wk
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm week-shift-btn"
+              onClick={() => onShiftProposedDate(1)}
+              title="One week later"
+              aria-label={`${member.name} one week later`}
+            >
+              +1 wk
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="hosted-date-cell">
         <span className="hosted-date-label">Hosted</span>
