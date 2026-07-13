@@ -425,7 +425,7 @@ img {
 
 .proposal-deadline {
   margin: 0 0 0.85rem;
-  font-size: 0.98rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--ink);
 }
@@ -434,19 +434,24 @@ img {
   margin-bottom: 1rem;
 }
 
-.proposal-deadline {
-  margin: 0 0 0.85rem;
-  font-size: 0.98rem;
+.proposal-summary .status-line {
+  margin-bottom: 0.65rem;
+  font-size: 1.12rem;
+  line-height: 1.55;
   font-weight: 600;
   color: var(--ink);
 }
 
-.proposal-summary .status-line {
-  margin-bottom: 0.55rem;
-}
-
 .proposal-summary .status-line:last-child {
   margin-bottom: 0;
+}
+
+.proposal-card .proposal-vote-cta .status-line,
+.proposal-card .proposal-progress .status-line,
+.proposal-card > .status-line {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--ink);
 }
 
 .proposal-progress {
@@ -454,7 +459,7 @@ img {
 }
 
 .proposal-progress-meta {
-  font-size: 0.95rem;
+  font-size: 1.08rem;
   font-weight: 700;
   color: var(--ink);
   margin-bottom: 0.45rem;
@@ -497,6 +502,10 @@ img {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--green-dark);
+}
+
+.proposal-card .please-vote {
+  font-size: 0.9rem;
 }
 
 .vote-block {
@@ -555,7 +564,7 @@ img {
 
 .proposal-tally-col h4 {
   margin: 0 0 0.5rem;
-  font-size: 0.95rem;
+  font-size: 1.08rem;
   color: var(--green-dark);
 }
 
@@ -572,8 +581,8 @@ img {
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--ink);
 }
