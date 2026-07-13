@@ -32,6 +32,9 @@ export function TrackerPanel({
   const currentIndex = members.findIndex((m) => m.isCurrent);
   const interactive = canInteract(data, current);
   const hostConfirmed = members.some((m) => m.status === "Hosting");
+  const proposalVotes = new Map(
+    (data.scheduleProposal?.votes ?? []).map((v) => [v.name, v.vote]),
+  );
 
   return (
     <div className="panel">
@@ -87,13 +90,10 @@ export function TrackerPanel({
         )}
       </div>
 
-      <ScheduleProposalPanel
-        proposal={data.scheduleProposal}
-        onVote={onProposalVote}
-      />
+      <ScheduleProposalPanel proposal={data.scheduleProposal} />
 
       <div className="card">
-        <h3 className="section-title">Family</h3>
+        <h3 className="section-title">Family schedule &amp; votes</h3>
         <div
           className="member-list-header member-list-header-schedule"
           aria-hidden="true"
@@ -101,18 +101,21 @@ export function TrackerPanel({
           <span>Member</span>
           <span>Proposed date</span>
           <span>Date hosted</span>
+          <span>Schedule vote</span>
         </div>
         {members.map((member, index) => (
           <MemberRow
             key={member.name}
             member={member}
             history={data.history ?? []}
-            showVotes={
+            showRsvpVotes={
               hostConfirmed &&
               !member.isCurrent &&
               member.status !== "Hosting"
             }
-            onVote={(vote) => onVote(index, vote)}
+            proposalVote={proposalVotes.get(member.name) ?? null}
+            onRsvpVote={(vote) => onVote(index, vote)}
+            onProposalVote={(vote) => onProposalVote(member.name, vote)}
             onShiftProposedDate={(weeks) =>
               onShiftProposedDate(member.name, weeks)
             }

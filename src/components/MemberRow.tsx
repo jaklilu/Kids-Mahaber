@@ -5,16 +5,20 @@ import { formatDate } from "../utils";
 type Props = {
   member: Member;
   history: HistoryEntry[];
-  showVotes: boolean;
-  onVote: (vote: Vote) => void;
+  showRsvpVotes: boolean;
+  proposalVote: Vote;
+  onRsvpVote: (vote: Vote) => void;
+  onProposalVote: (vote: Vote) => void;
   onShiftProposedDate: (weeks: 1 | -1) => void;
 };
 
 export function MemberRow({
   member,
   history,
-  showVotes,
-  onVote,
+  showRsvpVotes,
+  proposalVote,
+  onRsvpVote,
+  onProposalVote,
   onShiftProposedDate,
 }: Props) {
   const hostedDate = getLastHostedDate(member, history);
@@ -44,24 +48,29 @@ export function MemberRow({
           ) : member.isCurrent ? (
             <span className="badge">Current</span>
           ) : null}
-          {showVotes && (
-            <div className="vote-row">
-              <button
-                type="button"
-                className={`vote-btn yes ${member.vote === "yes" ? "active" : ""}`}
-                onClick={() => onVote("yes")}
-                aria-label={`${member.name} yes`}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                className={`vote-btn no ${member.vote === "no" ? "active" : ""}`}
-                onClick={() => onVote("no")}
-                aria-label={`${member.name} no`}
-              >
-                No
-              </button>
+          {showRsvpVotes && (
+            <div className="vote-block">
+              <span className="please-vote">Please Vote</span>
+              <div className="vote-row">
+                <button
+                  type="button"
+                  className={`vote-btn thumb yes ${member.vote === "yes" ? "active" : ""}`}
+                  onClick={() => onRsvpVote("yes")}
+                  aria-label={`${member.name} RSVP yes`}
+                  title="Yes"
+                >
+                  👍
+                </button>
+                <button
+                  type="button"
+                  className={`vote-btn thumb no ${member.vote === "no" ? "active" : ""}`}
+                  onClick={() => onRsvpVote("no")}
+                  aria-label={`${member.name} RSVP no`}
+                  title="No"
+                >
+                  👎
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -101,6 +110,29 @@ export function MemberRow({
         <span className={`hosted-date-value ${hostedDate ? "" : "empty"}`}>
           {displayHostedDate(hostedDate)}
         </span>
+      </div>
+      <div className="hosted-date-cell proposal-vote-cell">
+        <span className="please-vote">Please Vote</span>
+        <div className="vote-row">
+          <button
+            type="button"
+            className={`vote-btn thumb yes ${proposalVote === "yes" ? "active" : ""}`}
+            onClick={() => onProposalVote("yes")}
+            aria-label={`${member.name} agree with schedule`}
+            title="Agree"
+          >
+            👍
+          </button>
+          <button
+            type="button"
+            className={`vote-btn thumb no ${proposalVote === "no" ? "active" : ""}`}
+            onClick={() => onProposalVote("no")}
+            aria-label={`${member.name} disagree with schedule`}
+            title="Disagree"
+          >
+            👎
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -303,7 +303,11 @@ img {
 
 .member-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(6.5rem, 1fr) minmax(6.5rem, 1fr);
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(6rem, 1fr)
+    minmax(5.5rem, 0.9fr)
+    minmax(5.5rem, 0.9fr);
   align-items: center;
   gap: 0.75rem;
   padding: 0.85rem 0;
@@ -320,9 +324,19 @@ img {
   justify-self: start;
 }
 
+.member-row-simple {
+  display: flex;
+  grid-template-columns: none;
+  justify-content: flex-start;
+}
+
 .member-list-header {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(6.5rem, 1fr) minmax(6.5rem, 1fr);
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(6rem, 1fr)
+    minmax(5.5rem, 0.9fr)
+    minmax(5.5rem, 0.9fr);
   align-items: center;
   gap: 0.75rem;
   padding: 0 0 0.55rem;
@@ -339,8 +353,7 @@ img {
   justify-self: start;
 }
 
-.member-list-header span:nth-child(2),
-.member-list-header span:nth-child(3) {
+.member-list-header span:not(:first-child) {
   justify-self: center;
   text-align: center;
 }
@@ -454,22 +467,27 @@ img {
   background: rgba(217, 119, 6, 0.85);
 }
 
-.proposal-voters {
-  display: grid;
-  gap: 0.35rem;
+.please-vote {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--green-dark);
 }
 
-.proposal-voter {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--line);
+.vote-block {
+  margin-top: 0.4rem;
 }
 
-.proposal-voter:last-child {
-  border-bottom: 0;
+.proposal-vote-cell {
+  min-width: 5.5rem;
+}
+
+.vote-btn.thumb {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 @media (max-width: 640px) {
@@ -483,9 +501,15 @@ img {
     min-width: 0;
     width: 100%;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: space-between;
     text-align: left;
     padding-left: 4.5rem;
+  }
+
+  .proposal-vote-cell {
+    justify-content: flex-start;
+    gap: 0.5rem;
   }
 
   .hosted-date-label {
