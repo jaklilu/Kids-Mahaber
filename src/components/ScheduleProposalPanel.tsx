@@ -24,7 +24,11 @@ export function ScheduleProposalPanel({ proposal, onVote }: Props) {
           <span className="badge warn">Open for votes</span>
         )}
       </div>
-      <p className="status-line proposal-summary">{proposal.summary}</p>
+      <p className="status-line proposal-summary">
+        {proposal.summary.includes("−1 wk")
+          ? proposal.summary
+          : `${proposal.summary} If a date does not work, use −1 wk or +1 wk under Proposed date to move it one week earlier or later.`}
+      </p>
 
       <div className="proposal-progress">
         <div className="proposal-progress-meta">

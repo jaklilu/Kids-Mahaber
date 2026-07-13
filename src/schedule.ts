@@ -1,5 +1,8 @@
 import type { Member, ScheduleProposal, TrackerData, Vote } from "./types";
 
+export const PROPOSAL_SUMMARY =
+  "Frea hosts on the second Saturday one month from now; then every three months on the second Saturday for each person in order. If a date does not work, use −1 wk or +1 wk under Proposed date to move it one week earlier or later. If more than 70% vote Yes, this becomes our process.";
+
 export function secondSaturdayOfMonth(year: number, monthIndex: number): Date {
   const first = new Date(year, monthIndex, 1);
   const day = first.getDay();
@@ -58,8 +61,7 @@ export function applyProposedSchedule(
 
   const scheduleProposal: ScheduleProposal = {
     title: "Quarterly second-Saturday hosting",
-    summary:
-      "Frea hosts on the second Saturday one month from now; then every three months on the second Saturday for each person in order. If more than 70% vote Yes, this becomes our process.",
+    summary: PROPOSAL_SUMMARY,
     createdAt: toIsoDate(from),
     adopted: false,
     threshold: 0.7,
