@@ -43,7 +43,9 @@ function localDir(): string {
 }
 
 function store() {
-  return getStore({ name: "kids-mahaber", consistency: "strong" });
+  // Do not use consistency: "strong" here — Functions v1 / connectLambda
+  // does not provide uncachedEdgeURL and strong reads fail at runtime.
+  return getStore("kids-mahaber");
 }
 
 /**
