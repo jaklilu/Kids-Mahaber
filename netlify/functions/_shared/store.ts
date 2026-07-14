@@ -1,7 +1,7 @@
 import { connectLambda, getStore } from "@netlify/blobs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { ensureScheduleProposal } from "./schedule";
+import { ensureScheduleProposal, FREA_FIRST_HOST_DATE } from "./schedule";
 import { defaultKids, defaultTracker } from "./seed";
 import type { KidsData, TrackerData } from "./types";
 
@@ -127,8 +127,15 @@ export async function getTracker(): Promise<TrackerData> {
     await setJson(TRACKER_KEY, seed);
     return ensureScheduleProposal(seed);
   }
-  // Do not persist ensureScheduleProposal from GET (avoids vote clobber races).
-  return ensureScheduleProposal(data);
+  const withSchedule = ensureScheduleProposal(data);
+  const before = data.members.find((m) => m.name === "Frea")?.proposedDate;
+  const after = withSchedule.members.find((m) => m.name === "Frea")?.proposedDate;
+  // Persist one-time correction if we restored Frea to Aug 15.
+  if (before === "2026-08-08" && after === FREA_FIRST_HOST_DATE) {
+    withSchedule.updatedAt = Date.now();
+    await setJson(TRACKER_KEY, withSchedule);
+  }
+  return withSchedule;
 }
 
 export async function saveTracker(data: TrackerData): Promise<void> {

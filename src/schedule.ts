@@ -14,7 +14,7 @@ export const PROPOSAL_DEADLINE_LABEL = "Wednesday, July 15, 2026 at 5:00 PM";
 
 export const PROPOSAL_SUMMARY = [
   "We propose a new hosting schedule:",
-  "Frea will host on Saturday, one month from now.",
+  "Frea will host on Saturday, August 15, 2026.",
   "After that, hosting will rotate to the next person every three months, always on the second Saturday, following the established order.",
   "Which means we will see each other every three months for sure.",
   "If the scheduled date does not work for a host, it may be moved one week earlier or one week later (−1 week or +1 week), as shown in the schedule table below.",
@@ -44,23 +44,31 @@ export function toIsoDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+/** Locked first host date — do not auto-rebuild this to second Saturday. */
+export const FREA_FIRST_HOST_DATE = "2026-08-15";
+
 export function buildQuarterlySecondSaturdaySchedule(
   members: Member[],
-  from: Date = new Date(),
+  _from: Date = new Date(),
 ): { name: string; date: string }[] {
-  const start = new Date(from.getFullYear(), from.getMonth() + 1, 1);
-  let year = start.getFullYear();
-  let month = start.getMonth();
+  // Season starts August 2026: Frea on Aug 15, then every 3 months on the
+  // second Saturday for everyone after her in roster order.
+  return members.map((member, index) => {
+    if (member.name === "Frea") {
+      return { name: member.name, date: FREA_FIRST_HOST_DATE };
+    }
 
-  return members.map((member) => {
-    const date = secondSaturdayOfMonth(year, month);
-    const entry = { name: member.name, date: toIsoDate(date) };
-    month += 3;
-    if (month > 11) {
+    let month = 7 + index * 3; // August = 7
+    let year = 2026;
+    while (month > 11) {
       month -= 12;
       year += 1;
     }
-    return entry;
+
+    return {
+      name: member.name,
+      date: toIsoDate(secondSaturdayOfMonth(year, month)),
+    };
   });
 }
 
