@@ -9,7 +9,13 @@ import { AdminPanel } from "./components/AdminPanel";
 import { KidsPanel } from "./components/KidsPanel";
 import { Modal } from "./components/Modal";
 import { TrackerPanel } from "./components/TrackerPanel";
-import type { Kid, TabId, TrackerData, Vote } from "./types";
+import type {
+  Kid,
+  ScheduleProposalResponse,
+  TabId,
+  TrackerData,
+  Vote,
+} from "./types";
 import { todayIso } from "./utils";
 
 const emptyTracker: TrackerData = {
@@ -19,7 +25,92 @@ const emptyTracker: TrackerData = {
   currentRoundPassers: [],
   hostConfirmed: false,
   lastHostIndex: -1,
+  updatedAt: 0,
 };
+
+function mergeNamedVotes(
+  a: ScheduleProposalResponse[] | undefined,
+  b: ScheduleProposalResponse[] | undefined,
+): ScheduleProposalResponse[] {
+  const map = new Map<string, ScheduleProposalResponse>();
+  for (const entry of [...(a ?? []), ...(b ?? [])]) {
+    const key = entry.firstName.trim().toLowerCase();
+    if (!key) continue;
+    map.set(key, entry);
+  }
+  return [...map.values()];
+}
+
+function mergeTracker(prev: TrackerData, next: TrackerData): TrackerData {
+  const prevAt = prev.updatedAt ?? 0;
+  const nextAt = next.updatedAt ?? 0;
+
+  // Prefer strictly newer server snapshots as authoritative.
+  if (nextAt > prevAt) {
+    return {
+      ...emptyTracker,
+      ...next,
+      members: next.members ?? [],
+      history: next.history ?? [],
+      currentRoundPassers: next.currentRoundPassers ?? [],
+    };
+  }
+
+  // Equal/older stamp: keep local writes; never let a stale poll drop votes.
+  if (!prev.members.length) {
+    return {
+      ...emptyTracker,
+      ...next,
+      members: next.members ?? [],
+      history: next.history ?? [],
+      currentRoundPassers: next.currentRoundPassers ?? [],
+    };
+  }
+
+  return {
+    ...prev,
+    members: prev.members.map((m) => {
+      const remote = next.members?.find((n) => n.name === m.name);
+      if (!remote) return m;
+      return {
+        ...m,
+        ...remote,
+        dateConfirmed: Boolean(m.dateConfirmed || remote.dateConfirmed),
+        proposedDate: remote.proposedDate || m.proposedDate,
+      };
+    }),
+    scheduleProposal:
+      prev.scheduleProposal || next.scheduleProposal
+        ? {
+            ...(next.scheduleProposal ?? prev.scheduleProposal!),
+            ...(prev.scheduleProposal ?? {}),
+            responses: mergeNamedVotes(
+              prev.scheduleProposal?.responses,
+              next.scheduleProposal?.responses,
+            ),
+            kidsResponses: mergeNamedVotes(
+              prev.scheduleProposal?.kidsResponses,
+              next.scheduleProposal?.kidsResponses,
+            ),
+            adopted: Boolean(
+              prev.scheduleProposal?.adopted || next.scheduleProposal?.adopted,
+            ),
+          }
+        : null,
+    updatedAt: Math.max(prevAt, nextAt),
+  };
+}
+
+function mergeKids(prev: Kid[], next: Kid[]): Kid[] {
+  if (!prev.length) return next;
+  return next.map((k) => {
+    const local = prev.find((p) => p.name === k.name);
+    if (!local) return k;
+    // Don't let a null remote wipe a just-cast local vote.
+    if (local.vote && !k.vote) return { ...k, vote: local.vote };
+    return k;
+  });
+}
 
 export default function App() {
   const [tab, setTab] = useState<TabId>("tracker");
@@ -29,6 +120,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [adminOk, setAdminOk] = useState(Boolean(getAdminPassword()));
   const refreshSeq = useRef(0);
+  const dataRef = useRef(data);
+  const kidsRef = useRef(kids);
+  dataRef.current = data;
+  kidsRef.current = kids;
 
   const [dateOpen, setDateOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(false);
@@ -50,16 +145,10 @@ export default function App() {
         api.getTracker(),
         api.getKids(),
       ]);
-      // Ignore outdated polls so a slow GET can't wipe a vote that just saved.
       if (seq !== refreshSeq.current) return;
-      setData({
-        ...emptyTracker,
-        ...tracker,
-        members: tracker.members ?? [],
-        history: tracker.history ?? [],
-        currentRoundPassers: tracker.currentRoundPassers ?? [],
-      });
-      setKids(kidsData.kids ?? []);
+
+      setData((prev) => mergeTracker(prev, tracker));
+      setKids((prev) => mergeKids(prev, kidsData.kids ?? []));
       setError(null);
     } catch (err) {
       if (seq !== refreshSeq.current) return;
@@ -72,13 +161,7 @@ export default function App() {
   const applyTracker = useCallback((tracker: TrackerData) => {
     // Invalidate in-flight polls so they can't overwrite this fresher state.
     refreshSeq.current += 1;
-    setData({
-      ...emptyTracker,
-      ...tracker,
-      members: tracker.members ?? [],
-      history: tracker.history ?? [],
-      currentRoundPassers: tracker.currentRoundPassers ?? [],
-    });
+    setData((prev) => mergeTracker(prev, tracker));
   }, []);
 
   useEffect(() => {
@@ -137,8 +220,9 @@ export default function App() {
   }
 
   async function castMemberVote(index: number, vote: Vote) {
-    const next = structuredClone(data);
+    const next = structuredClone(dataRef.current);
     next.members[index].vote = vote;
+    next.updatedAt = Date.now();
     applyTracker(next);
     try {
       await api.saveTracker(next);
@@ -170,10 +254,11 @@ export default function App() {
 
   async function moveMember(index: number, direction: "up" | "down") {
     const newIndex = direction === "up" ? index - 1 : index + 1;
-    const next = structuredClone(data);
+    const next = structuredClone(dataRef.current);
     const temp = next.members[index];
     next.members[index] = next.members[newIndex];
     next.members[newIndex] = temp;
+    next.updatedAt = Date.now();
     applyTracker(next);
     try {
       await api.saveTracker(next);
@@ -184,8 +269,9 @@ export default function App() {
   }
 
   async function deleteHistory(index: number) {
-    const next = structuredClone(data);
+    const next = structuredClone(dataRef.current);
     next.history.splice(index, 1);
+    next.updatedAt = Date.now();
     applyTracker(next);
     try {
       await api.saveTracker(next);
@@ -199,7 +285,10 @@ export default function App() {
     <div className="app-shell">
       <header className="brand-bar">
         <h1>Kids Mahaber</h1>
-        <p>Family hosting rotation, RSVP votes, and children attendance — all in one place.</p>
+        <p>
+          Family hosting rotation, RSVP votes, and children attendance — all in
+          one place.
+        </p>
       </header>
 
       <nav className="tabs" aria-label="Main">
@@ -470,14 +559,14 @@ export default function App() {
       />
 
       <Modal
-        open={Boolean(pendingKidVote)}
-        title="Confirm who you are"
+        open={pendingKidVote !== null}
+        title="Confirm"
         message={
           pendingKidVote
-            ? `Are you ${pendingKidVote.name}?`
+            ? `Is this ${pendingKidVote.name}?`
             : undefined
         }
-        confirmLabel="Yes, that's me"
+        confirmLabel="Yes, it's me"
         onCancel={() => setPendingKidVote(null)}
         onConfirm={() => void confirmKidVote()}
       />

@@ -7,7 +7,7 @@ import {
   proposalStats,
   shiftIsoDateByWeeks,
 } from "./_shared/schedule";
-import { getKids, getTracker, saveKids, saveTracker } from "./_shared/store";
+import { getKids, getStorageMode, getTracker, saveKids, saveTracker } from "./_shared/store";
 import type { TrackerData, ScheduleProposalResponse } from "./_shared/types";
 
 const cors = {
@@ -448,7 +448,11 @@ export const handler: Handler = async (event) => {
     }
 
     if (action === "health" && event.httpMethod === "GET") {
-      return json(200, { status: "ok", service: "Kids Mahaber API" });
+      return json(200, {
+        status: "ok",
+        service: "Kids Mahaber API",
+        storage: getStorageMode(),
+      });
     }
 
     return json(404, { error: "Not found", route });

@@ -1,6 +1,5 @@
 import { getStore } from "@netlify/blobs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { ensureScheduleProposal } from "./schedule";
 import { defaultKids, defaultTracker } from "./seed";
@@ -9,32 +8,27 @@ import type { KidsData, TrackerData } from "./types";
 const TRACKER_KEY = "tracker";
 const KIDS_KEY = "kids";
 
-/** True on Netlify production / deploy previews / `netlify dev` with Blobs. */
-function isNetlifyRuntime(): boolean {
+/**
+ * Deployed Netlify/AWS never uses the local filesystem — /tmp is per-instance
+ * and was causing votes to vanish then reappear when traffic hit different workers.
+ */
+function isDeployedServerless(): boolean {
+  const context = process.env.CONTEXT || "";
   return Boolean(
-    process.env.NETLIFY ||
-      process.env.CONTEXT ||
-      process.env.NETLIFY_BLOBS_CONTEXT ||
-      process.env.NETLIFY_DEV,
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.cwd().startsWith("/var/task") ||
+      context === "production" ||
+      context === "deploy-preview" ||
+      context === "branch-deploy",
   );
 }
 
 function useFileStore(): boolean {
-  // Force file store only for explicit local-dev flag, and never on Netlify.
-  if (isNetlifyRuntime() && process.env.USE_LOCAL_STORE !== "1") {
-    return false;
-  }
-  return (
-    process.env.USE_LOCAL_STORE === "1" ||
-    !isNetlifyRuntime()
-  );
+  if (isDeployedServerless()) return false;
+  return process.env.USE_LOCAL_STORE === "1";
 }
 
 function localDir(): string {
-  // Lambda / Netlify functions cannot write under /var/task — use /tmp there.
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME || process.cwd().startsWith("/var/task")) {
-    return path.join(os.tmpdir(), "kids-mahaber-data");
-  }
   return path.join(process.cwd(), "data");
 }
 
@@ -91,32 +85,39 @@ async function setJson(key: string, value: unknown) {
 export async function getTracker(): Promise<TrackerData> {
   const data = await getJson<TrackerData>(TRACKER_KEY);
   if (!data) {
+    // Only seed when the store is truly empty. Never treat a soft miss as
+    // wipe-and-replace on subsequent reads — seeding is write-once here.
     const seed = structuredClone(defaultTracker);
+    seed.updatedAt = Date.now();
     await setJson(TRACKER_KEY, seed);
-    return seed;
+    return ensureScheduleProposal(seed);
   }
-  const withSchedule = ensureScheduleProposal(data);
-  if (withSchedule !== data) {
-    await setJson(TRACKER_KEY, withSchedule);
-  }
-  return withSchedule;
+  // IMPORTANT: do not persist ensureScheduleProposal from GET.
+  // Writing on every GET caused lost updates that wiped concurrent votes.
+  return ensureScheduleProposal(data);
 }
 
 export async function saveTracker(data: TrackerData): Promise<void> {
   data.hostConfirmed = data.members.some((m) => m.status === "Hosting");
-  await setJson(TRACKER_KEY, data);
+  data.updatedAt = Date.now();
+  // Persist normalized proposal copy whenever we intentionally write.
+  const normalized = ensureScheduleProposal(data);
+  normalized.updatedAt = data.updatedAt;
+  await setJson(TRACKER_KEY, normalized);
 }
 
 export async function getKids(): Promise<KidsData> {
   const data = await getJson<KidsData>(KIDS_KEY);
   if (!data) {
     const seed = structuredClone(defaultKids);
+    seed.updatedAt = Date.now();
     await setJson(KIDS_KEY, seed);
     return seed;
   }
   if ("adults" in (data as object) && !("kids" in (data as object))) {
     const migrated: KidsData = {
       kids: (data as unknown as { adults: KidsData["kids"] }).adults,
+      updatedAt: Date.now(),
     };
     await setJson(KIDS_KEY, migrated);
     return migrated;
@@ -125,5 +126,10 @@ export async function getKids(): Promise<KidsData> {
 }
 
 export async function saveKids(data: KidsData): Promise<void> {
+  data.updatedAt = Date.now();
   await setJson(KIDS_KEY, data);
+}
+
+export function getStorageMode(): "blobs" | "local-file" {
+  return useFileStore() ? "local-file" : "blobs";
 }

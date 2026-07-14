@@ -43,6 +43,8 @@ export interface TrackerData {
   hostConfirmed: boolean;
   lastHostIndex: number;
   scheduleProposal?: ScheduleProposal | null;
+  /** Monotonic-ish write stamp (ms) so clients can ignore stale polls */
+  updatedAt?: number;
 }
 
 export interface Kid {
@@ -53,6 +55,7 @@ export interface Kid {
 
 export interface KidsData {
   kids: Kid[];
+  updatedAt?: number;
 }
 
 export type TabId = "tracker" | "admin" | "kids";

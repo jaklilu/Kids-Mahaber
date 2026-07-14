@@ -133,6 +133,8 @@ Old shape used per-member `votes: { name, photo, vote }[]`. Backend/frontend mig
 
 **Prod bug fixed 2026-07-12:** Site showed `ENOENT: mkdir '/var/task/data'` because Blobs failures (or local-store mode) fell back to writing under the function package dir, which is read-only. Store now uses Blobs on Netlify and never falls back to `/var/task/data`.
 
+**Vote-loss bug fixed 2026-07-13:** Votes disappeared then reappeared because (1) GET `/api/data` was read-modify-writing Blobs whenever proposal text was synced, racing with votes and clobbering them, and/or (2) `USE_LOCAL_STORE=1` on deploy would write to per-instance `/tmp`. Fixes: never persist from GET; hard-block file store on deployed contexts; stamp `updatedAt` on writes; client ignores stale polls and merges conservatively. Health returns `{ storage: "blobs"|"local-file" }`. **Do not set `USE_LOCAL_STORE` in Netlify env.**
+
 ### Local commands
 
 ```bash
