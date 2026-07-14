@@ -9,26 +9,35 @@ const TRACKER_KEY = "tracker";
 const KIDS_KEY = "kids";
 
 /**
- * Deployed Netlify/AWS never uses the local filesystem — /tmp is per-instance
- * and was causing votes to vanish then reappear when traffic hit different workers.
+ * True only for real Netlify site deploys (not `netlify dev`).
+ * Deployed functions must use Blobs — /tmp is per-instance and loses votes.
  */
-function isDeployedServerless(): boolean {
+function isNetlifyDeploy(): boolean {
   const context = process.env.CONTEXT || "";
-  return Boolean(
-    process.env.AWS_LAMBDA_FUNCTION_NAME ||
-      process.cwd().startsWith("/var/task") ||
-      context === "production" ||
-      context === "deploy-preview" ||
-      context === "branch-deploy",
+  return (
+    context === "production" ||
+    context === "deploy-preview" ||
+    context === "branch-deploy"
   );
 }
 
 function useFileStore(): boolean {
-  if (isDeployedServerless()) return false;
-  return process.env.USE_LOCAL_STORE === "1";
+  // Production / preview deploys: always Blobs.
+  if (isNetlifyDeploy()) return false;
+
+  // Local machine + `netlify dev`: use the repo `data/` folder.
+  // (Blobs is often unavailable locally without siteID/token.)
+  if (process.env.USE_LOCAL_STORE === "1") return true;
+  if (process.env.NETLIFY_DEV === "true") return true;
+
+  // Plain node without Netlify: file store.
+  if (!process.env.NETLIFY && !process.env.NETLIFY_BLOBS_CONTEXT) return true;
+
+  return false;
 }
 
 function localDir(): string {
+  // Always project `data/` for local — never Lambda /tmp.
   return path.join(process.cwd(), "data");
 }
 
