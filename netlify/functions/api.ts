@@ -7,7 +7,7 @@ import {
   proposalStats,
   shiftIsoDateByWeeks,
 } from "./_shared/schedule";
-import { getKids, getStorageMode, getTracker, saveKids, saveTracker } from "./_shared/store";
+import { getKids, getStorageMode, getTracker, saveKids, saveTracker, connectBlobs } from "./_shared/store";
 import type { TrackerData, ScheduleProposalResponse } from "./_shared/types";
 
 const cors = {
@@ -100,6 +100,9 @@ export const handler: Handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: cors, body: "" };
   }
+
+  // Wire Blobs credentials for Functions v1 Lambda compatibility mode.
+  connectBlobs(event);
 
   const rawPath = event.path || "";
   const parts = rawPath

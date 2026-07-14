@@ -1,4 +1,4 @@
-import { getStore } from "@netlify/blobs";
+import { connectLambda, getStore } from "@netlify/blobs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ensureScheduleProposal } from "./schedule";
@@ -12,7 +12,9 @@ const KIDS_KEY = "kids";
 function isLambdaPackage(): boolean {
   return (
     process.cwd().startsWith("/var/task") ||
-    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME && process.env.NETLIFY_DEV !== "true")
+    Boolean(
+      process.env.AWS_LAMBDA_FUNCTION_NAME && process.env.NETLIFY_DEV !== "true",
+    )
   );
 }
 
@@ -42,6 +44,15 @@ function localDir(): string {
 
 function store() {
   return getStore({ name: "kids-mahaber", consistency: "strong" });
+}
+
+/**
+ * Required for Functions v1 (`export const handler`) on Netlify.
+ * Without this, getStore throws MissingBlobsEnvironmentError (siteID/token).
+ */
+export function connectBlobs(event: unknown): void {
+  if (useFileStore()) return;
+  connectLambda(event as Parameters<typeof connectLambda>[0]);
 }
 
 async function ensureLocalDir() {
