@@ -8,11 +8,15 @@ import type { KidsData, TrackerData } from "./types";
 const TRACKER_KEY = "tracker";
 const KIDS_KEY = "kids";
 
-/**
- * True only for real Netlify site deploys (not `netlify dev`).
- * Deployed functions must use Blobs — /tmp is per-instance and loses votes.
- */
-function isNetlifyDeploy(): boolean {
+/** Running inside the Netlify/AWS Lambda package (read-only filesystem). */
+function isLambdaPackage(): boolean {
+  return (
+    process.cwd().startsWith("/var/task") ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME && process.env.NETLIFY_DEV !== "true")
+  );
+}
+
+function isNetlifyDeployContext(): boolean {
   const context = process.env.CONTEXT || "";
   return (
     context === "production" ||
@@ -21,23 +25,18 @@ function isNetlifyDeploy(): boolean {
   );
 }
 
+/**
+ * Local file store only for real local/dev machines.
+ * Live Netlify MUST use Blobs — writing under /var/task causes ENOENT and lost votes.
+ */
 function useFileStore(): boolean {
-  // Production / preview deploys: always Blobs.
-  if (isNetlifyDeploy()) return false;
-
-  // Local machine + `netlify dev`: use the repo `data/` folder.
-  // (Blobs is often unavailable locally without siteID/token.)
-  if (process.env.USE_LOCAL_STORE === "1") return true;
-  if (process.env.NETLIFY_DEV === "true") return true;
-
-  // Plain node without Netlify: file store.
-  if (!process.env.NETLIFY && !process.env.NETLIFY_BLOBS_CONTEXT) return true;
-
-  return false;
+  if (isLambdaPackage() || isNetlifyDeployContext()) {
+    return false;
+  }
+  return process.env.USE_LOCAL_STORE === "1";
 }
 
 function localDir(): string {
-  // Always project `data/` for local — never Lambda /tmp.
   return path.join(process.cwd(), "data");
 }
 
@@ -68,12 +67,28 @@ async function localSet(key: string, value: unknown) {
 }
 
 async function blobGet<T>(key: string): Promise<T | null> {
-  const value = await store().get(key, { type: "json" });
-  return (value as T | null) ?? null;
+  try {
+    const value = await store().get(key, { type: "json" });
+    return (value as T | null) ?? null;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Netlify Blobs read failed (${key}): ${message}. ` +
+        `On the live site, remove USE_LOCAL_STORE from Netlify env vars if set.`,
+    );
+  }
 }
 
 async function blobSet(key: string, value: unknown) {
-  await store().setJSON(key, value);
+  try {
+    await store().setJSON(key, value);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `Netlify Blobs write failed (${key}): ${message}. ` +
+        `On the live site, remove USE_LOCAL_STORE from Netlify env vars if set.`,
+    );
+  }
 }
 
 async function getJson<T>(key: string): Promise<T | null> {
@@ -94,22 +109,18 @@ async function setJson(key: string, value: unknown) {
 export async function getTracker(): Promise<TrackerData> {
   const data = await getJson<TrackerData>(TRACKER_KEY);
   if (!data) {
-    // Only seed when the store is truly empty. Never treat a soft miss as
-    // wipe-and-replace on subsequent reads — seeding is write-once here.
     const seed = structuredClone(defaultTracker);
     seed.updatedAt = Date.now();
     await setJson(TRACKER_KEY, seed);
     return ensureScheduleProposal(seed);
   }
-  // IMPORTANT: do not persist ensureScheduleProposal from GET.
-  // Writing on every GET caused lost updates that wiped concurrent votes.
+  // Do not persist ensureScheduleProposal from GET (avoids vote clobber races).
   return ensureScheduleProposal(data);
 }
 
 export async function saveTracker(data: TrackerData): Promise<void> {
   data.hostConfirmed = data.members.some((m) => m.status === "Hosting");
   data.updatedAt = Date.now();
-  // Persist normalized proposal copy whenever we intentionally write.
   const normalized = ensureScheduleProposal(data);
   normalized.updatedAt = data.updatedAt;
   await setJson(TRACKER_KEY, normalized);
