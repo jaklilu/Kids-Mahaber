@@ -33,3 +33,14 @@ Admin password defaults to `change-me` (see `.env` / Netlify env `ADMIN_PASSWORD
 - Tracker: current turn, Host / Pass, family RSVP votes
 - Admin: reset, reorder, history
 - Kids: attendance yes/no
+- PWA: installable (home screen); app-shell cache only — live `/api` data is never cached
+
+## Try the PWA locally
+
+```bash
+npm run build
+npx vite preview --host
+```
+
+Open the preview URL on your phone (same Wi‑Fi) or in Chrome → Install / Add to Home Screen.
+Service worker is **off** during `npm run dev` so API debugging stays simple; production/preview enables it.

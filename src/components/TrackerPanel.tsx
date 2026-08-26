@@ -101,31 +101,41 @@ export function TrackerPanel({
 
       <div className="card">
         <h3 className="section-title">Family schedule</h3>
-        <div
-          className="member-list-header member-list-header-schedule"
-          aria-hidden="true"
-        >
-          <span>Member</span>
-          <span>Proposed date</span>
-        </div>
-        {members.map((member, index) => (
-          <MemberRow
-            key={member.name}
-            member={member}
-            showRsvpVotes={
-              hostConfirmed &&
-              !member.isCurrent &&
-              member.status !== "Hosting"
-            }
-            onRsvpVote={(vote) => onVote(index, vote)}
-            onShiftProposedDate={(weeks) =>
-              onShiftProposedDate(member.name, weeks)
-            }
-            onConfirmProposedDate={() =>
-              onConfirmProposedDate(member.name)
-            }
-          />
-        ))}
+        {members.length === 0 ? (
+          <p className="empty">
+            No schedule data loaded. Use{" "}
+            <code>npm run dev</code> (http://localhost:8889) so the API is
+            available — Vite preview alone has no backend.
+          </p>
+        ) : (
+          <>
+            <div
+              className="member-list-header member-list-header-schedule"
+              aria-hidden="true"
+            >
+              <span>Member</span>
+              <span>Proposed date</span>
+            </div>
+            {members.map((member, index) => (
+              <MemberRow
+                key={member.name}
+                member={member}
+                showRsvpVotes={
+                  hostConfirmed &&
+                  !member.isCurrent &&
+                  member.status !== "Hosting"
+                }
+                onRsvpVote={(vote) => onVote(index, vote)}
+                onShiftProposedDate={(weeks) =>
+                  onShiftProposedDate(member.name, weeks)
+                }
+                onConfirmProposedDate={() =>
+                  onConfirmProposedDate(member.name)
+                }
+              />
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

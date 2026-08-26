@@ -1,6 +1,6 @@
 # Kids Mahaber — Agent Handoff Context
 
-Last updated: 2026-07-13
+Last updated: 2026-08-25 (PWA shell added)
 
 Use this file to continue work without re-discovering the project.
 
@@ -38,16 +38,48 @@ c:\Kids Mahaber\
 
 ---
 
-## Live / old systems (still running)
+## Live / old systems
 
 | System | URL | Role |
 |--------|-----|------|
-| Wix (mostly empty shell) | https://jaklilu5.wixsite.com/kidsmahaber | Old UI host |
-| PythonAnywhere API | https://kidsmahaber-jaklilu.pythonanywhere.com/api | Live shared state |
-| Design reference | https://wegene-family-mahaber.netlify.app/ | Color/vibe inspiration |
-| New GitHub repo | https://github.com/jaklilu/Kids-Mahaber.git | Source of truth for rebuild |
-| New live site | https://kids-mahaber.netlify.app/ | Netlify production |
+| New live site | https://kids-mahaber.netlify.app/ | **Primary** — Netlify + Blobs |
+| New GitHub repo | https://github.com/jaklilu/Kids-Mahaber.git | Source of truth (`kids-mahaber/` = repo root) |
 | Local Netlify Dev | http://localhost:8889 | Dev server (port **8889**, not 8888) |
+| Wix (mostly empty shell) | https://jaklilu5.wixsite.com/kidsmahaber | Old UI host — retire after cutover |
+| PythonAnywhere API | https://kidsmahaber-jaklilu.pythonanywhere.com/api | Old shared state — import then retire |
+| Design reference | https://wegene-family-mahaber.netlify.app/ | Color/vibe inspiration |
+
+**Prod health (verified 2026-08-25):** `GET /api/health` → `{ status: "ok", storage: "blobs" }`.
+
+---
+
+## Current product state (2026-08-25) — READ FIRST
+
+Snapshot from live Blobs via `GET /api/data`:
+
+| Item | Live value |
+|------|------------|
+| Process vote deadline | **Closed** (`2026-07-15T17:00:00-07:00`) |
+| Parents votes | **5 yes / 0 no** → `adopted: false` (need **>70% of 10** = **8+** 👍) |
+| Children process votes | **0** |
+| Host/Pass UI | Still **hidden** (`showCurrentTurn = false` in `TrackerPanel.tsx`) |
+| Current turn | **Frea** (`isCurrent: true`), status empty — **nobody Hosting** |
+| Frea proposed date | **2026-08-15** — **already past**, `dateConfirmed: false` |
+| Other confirms | Only **Tsedaye** confirmed (`2028-08-12`) |
+| History | Tammy `2025-09-20`, Tsedaye `2025-06-14` |
+| Kids process UI | Still shown (`SHOW_KIDS_PROCESS_VOTE = true`) |
+
+**Product limbo:** Voting closed short of the 70% bar; first host date slipped; rotation Host/Pass still off. Decide outcome + calendar before more feature work.
+
+### Suggested deep-dive tracks
+
+| Track | Question |
+|-------|----------|
+| **A. Process outcome** | Re-open vote, lower threshold, force-adopt, or archive the proposal UI? |
+| **B. Post-Aug-15 ops** | Slip Frea’s date, mark hosted, or regenerate schedule from “now”? Restore Host/Pass? |
+| **C. Cutover** | Import PythonAnywhere state → Blobs; retire Wix/PA; delete old folder |
+| **D. Hardening** | Member gate; lock open mutating routes; admin session vs password header |
+| **E. Notifications** | Wire Resend; fix site URL in email; decide on SMS |
 
 ---
 
@@ -57,18 +89,26 @@ Private family tool to rotate who **hosts** the next gathering:
 
 1. **Parents** tab (route id still `tracker`)
    - **Current turn card temporarily hidden** (`showCurrentTurn = false` in `TrackerPanel.tsx`) — Host/Pass not shown while family votes on the process; set to `true` to restore
-   - Family schedule table: **Member · Proposed date · Date hosted**
-   - Proposed dates can shift with **−1 wk / +1 wk** under each proposed date
+   - Family schedule table: **Member · Proposed date** (date-hosted column removed from Parents view; still in Admin)
+   - Proposed dates: **−1 wk / +1 wk** + **Pls Confirm** (`dateConfirmed`)
    - After someone hosts: member RSVP thumbs (👍/👎); buttons hide after vote
-   - **Separate proposal card** (not mixed with hosting) to vote on the new hosting *process* — **Parents tally**
-2. **Admin** — password gate; reset member / reset all; reorder; clear history; change current host date; refresh proposed schedule
+   - **Separate proposal cards** (explain / vote / tally) — **Parents tally** only drives adoption
+2. **Admin** — password gate; reset member / reset all; reorder; clear history; change current host date; refresh proposed schedule; shift proposed dates
 3. **Children** tab (route id still `kids`)
-   - Temporary **process vote** card (same copy/flow as parents; `SHOW_KIDS_PROCESS_VOTE` in `KidsPanel.tsx`) — set `false` to remove after voting ends
+   - Temporary **process vote** card (`SHOW_KIDS_PROCESS_VOTE` in `KidsPanel.tsx`) — set `false` after voting ends
    - Separate **Coming / not coming** RSVP tally + per-child thumbs
 
 Tabs labeled **Parents · Admin · Children**.
 
-Auto-refresh every 10s while tab visible.
+Auto-refresh every 10s while tab visible. Client merges by `updatedAt` and conservatively merges proposal/kids votes so stale polls cannot wipe local/recent votes.
+
+### Three separate “vote” systems (do not mix)
+
+1. **Process proposal** — first-name thumbs → `scheduleProposal.responses` / `kidsResponses`
+2. **Post-host RSVP** — after someone is `Hosting` → `member.vote`
+3. **Kids attendance** — Coming / not coming → `kids[].vote`
+
+Host/Pass is a fourth action path (currently hidden).
 
 ---
 
@@ -78,24 +118,24 @@ Kept **separate from hosting** so people don’t confuse thumbs with Host/Pass.
 
 ### Deadline
 
-- Closes **Wednesday, July 15, 2026 at 5:00 PM** Pacific
+- Closed **Wednesday, July 15, 2026 at 5:00 PM** Pacific
 - Constants: `PROPOSAL_DEADLINE_AT` (`2026-07-15T17:00:00-07:00`) + `PROPOSAL_DEADLINE_LABEL` in `src/schedule.ts` / `_shared/schedule.ts`
 - Stored on proposal as `deadlineAt`; synced by `ensureScheduleProposal()`
-- UI: deadline line under title; note under thumbs; badge **Voting Closed** after deadline; thumbs hidden
+- UI: deadline line under title; badge **Voting Closed** after deadline; thumbs hidden
 - API rejects `proposal-vote` after deadline via `isProposalVotingOpen()`
+- **Live outcome:** 5/10 yes → **not adopted** (threshold is strict `yes / familySize > 0.7`)
 
 ### Copy (source of truth)
 
 - Title / summary: `PROPOSAL_TITLE` + `PROPOSAL_SUMMARY` in `src/schedule.ts` and `netlify/functions/_shared/schedule.ts`
 - Title: **Vote on the New Hosting Process**
-- Includes: Frea hosts on Saturday one month from now; rotate every three months on second Saturdays; “Which means we will see each other every three months for sure.”
+- Includes: Frea hosts **Saturday, August 15, 2026**; rotate every three months on second Saturdays; “Which means we will see each other every three months for sure.”
 - Badge when open: **Open for Voting**
-- Under thumbs: “Please vote by Wednesday, July 15, 2026 at 5:00 PM. Voting closes after that.”
 - `ensureScheduleProposal()` rewrites stored title/summary/deadline when they differ from the constants (votes preserved)
 
 ### Vote UX
 
-1. Dedicated card explains the process (paragraphs from `PROPOSAL_SUMMARY`)
+1. Three cards: explanation → thumbs → tally (`ScheduleProposalPanel`)
 2. Large green 👍 / red 👎 (~4.5rem) → modal asks for **first name** (`Modal` `mode="text"`)
 3. Parents: `{ firstName, vote }` in `scheduleProposal.responses[]` — drives **>70%** adoption
 4. Children: same flow into `scheduleProposal.kidsResponses[]` (does **not** flip `adopted`; separate Children tally)
@@ -104,13 +144,11 @@ Kept **separate from hosting** so people don’t confuse thumbs with Host/Pass.
 
 ### Schedule rule (proposed dates)
 
-- Default builder: Frea = second Saturday **one month** from baseline, then every **3 months** second Saturday
-- Local/prod may have Frea shifted to **2026-08-15** via `shift-proposed-date` (+1 wk); regenerating schedule rebuilds defaults
-- Hosts may shift one week earlier/later via `POST /api/shift-proposed-date`
-
-### Admin
-
-- **Refresh proposed schedule** rebuilds dates and resets proposal votes (`generate-schedule`)
+- Builder: **Frea locked to `FREA_FIRST_HOST_DATE` = `2026-08-15`**, then every **3 months** second Saturday for subsequent roster order
+- `ensureScheduleProposal()` / `getTracker()` one-time-corrects Frea if stored as `2026-08-08` (old second-Saturday Aug) back to Aug 15
+- Hosts may shift ±1 week via `POST /api/shift-proposed-date` (clears `dateConfirmed`)
+- Host may confirm via `POST /api/confirm-proposed-date` → `dateConfirmed: true`
+- Admin **Refresh proposed schedule** rebuilds dates and **resets proposal votes** (`generate-schedule`)
 
 ### Legacy migration
 
@@ -123,6 +161,7 @@ Old shape used per-member `votes: { name, photo, vote }[]`. Backend/frontend mig
 | Layer | Choice |
 |-------|--------|
 | Frontend | React 19 + Vite + TypeScript |
+| PWA | Thin installable shell via `vite-plugin-pwa` (manifest + SW); **NetworkOnly for `/api/*`** — no offline data |
 | Hosting | Netlify |
 | API | Netlify Function `netlify/functions/api.ts` |
 | Storage (prod) | Netlify Blobs store `kids-mahaber` only — never `USE_LOCAL_STORE` on Netlify |
@@ -131,9 +170,13 @@ Old shape used per-member `votes: { name, photo, vote }[]`. Backend/frontend mig
 | Email (optional) | Resend via `RESEND_API_KEY` + `EMAIL_TO` |
 | Admin auth | `ADMIN_PASSWORD` env + `x-admin-password` header |
 
-**Prod bug fixed 2026-07-12:** Site showed `ENOENT: mkdir '/var/task/data'` because Blobs failures (or local-store mode) fell back to writing under the function package dir, which is read-only. Store now uses Blobs on Netlify and never falls back to `/var/task/data`.
+**Prod bug fixed 2026-07-12:** `ENOENT: mkdir '/var/task/data'` — never fall back to local files under Lambda. Blobs only on Netlify deploy contexts.
 
-**Vote-loss bug fixed 2026-07-13:** Votes disappeared then reappeared because (1) GET `/api/data` was read-modify-writing Blobs whenever proposal text was synced, racing with votes and clobbering them, and/or (2) `USE_LOCAL_STORE=1` on deploy would write to per-instance `/tmp`. Fixes: never persist from GET; hard-block file store on deployed contexts; stamp `updatedAt` on writes; client ignores stale polls and merges conservatively. Health returns `{ storage: "blobs"|"local-file" }`. **Do not set `USE_LOCAL_STORE` in Netlify env.**
+**Vote-loss bug fixed 2026-07-13:** Never persist from GET; hard-block file store on deployed contexts; stamp `updatedAt`; client ignores stale polls / merges votes. **Do not set `USE_LOCAL_STORE` in Netlify env.**
+
+**Blobs wiring fixed later (Jul commits):** `connectBlobs(event)` / `connectLambda` required for Functions v1; do **not** use Blobs `consistency: "strong"` (breaks without uncachedEdgeURL).
+
+**POST `/api/data` vote merge:** `mergeTrackerOnClientSave()` unions proposal responses so a stale full-tracker POST cannot drop process votes.
 
 ### Local commands
 
@@ -158,28 +201,34 @@ Production (Netlify UI): set `ADMIN_PASSWORD`; optionally `RESEND_API_KEY`, `EMA
 
 See `.env.example`.
 
+Email helper fallback URL should be `https://kids-mahaber.netlify.app` (hyphen). Confirm `URL` / `DEPLOY_PRIME_URL` / hardcoded fallback in `_shared/email.ts` if enabling Resend.
+
 ---
 
 ## API surface (`/api/*` → function `api`)
 
-| Method | Path | Notes |
-|--------|------|-------|
-| GET | `/api/health` | Health check |
-| GET/POST | `/api/data` | Full tracker read/write; POST may email on new host |
-| POST | `/api/host` | `{ memberIndex, date }` — moves host to top, history unshift |
-| POST | `/api/pass` | `{ currentIndex }` |
-| POST | `/api/update-host-date` | Admin; `{ memberIndex, date }` change gathering date |
-| POST | `/api/generate-schedule` | Admin; rebuild proposed dates + reset proposal votes |
-| POST | `/api/shift-proposed-date` | `{ name, weeks: 1 \| -1 }` |
-| POST | `/api/proposal-vote` | `{ firstName, vote: "yes"\|"no", audience?: "adults"\|"kids" }` — process vote + tally |
-| POST | `/api/reset` | Admin; clears member status **and** that member’s history rows |
-| POST | `/api/reset-all` | Admin; clears statuses + kids votes (keeps history) |
-| POST | `/api/clear-history` | Admin |
-| GET | `/api/kids` | Kids list + votes |
-| POST | `/api/kids/vote` | `{ name, vote: "yes"\|"no" }` |
-| POST | `/api/admin-login` | `{ password }` |
+| Method | Path | Auth | Notes |
+|--------|------|------|-------|
+| GET | `/api/health` | public | `{ status, storage: "blobs"\|"local-file" }` |
+| GET | `/api/data` | public | Full tracker (read-only; may in-memory ensure proposal) |
+| POST | `/api/data` | **public** | Full write; merges proposal votes; may email on new host |
+| POST | `/api/host` | **public** | `{ memberIndex, date }` — host to top, history unshift |
+| POST | `/api/pass` | **public** | `{ currentIndex }` |
+| POST | `/api/update-host-date` | admin | `{ index, date }` |
+| POST | `/api/generate-schedule` | admin | Rebuild proposed dates + reset proposal votes |
+| POST | `/api/shift-proposed-date` | **public** | `{ name, weeks: 1 \| -1 }` |
+| POST | `/api/confirm-proposed-date` | **public** | `{ name }` → `dateConfirmed` |
+| POST | `/api/proposal-vote` | **public** | `{ firstName, vote, audience? }` — blocked after deadline |
+| POST | `/api/reset` | admin | Clears member status **and** that member’s history rows |
+| POST | `/api/reset-all` | admin | Clears statuses + kids votes (keeps history) |
+| POST | `/api/clear-history` | admin | |
+| GET | `/api/kids` | public | Kids list + votes |
+| POST | `/api/kids/vote` | **public** | `{ name, vote: "yes"\|"no" }` |
+| POST | `/api/admin-login` | public | `{ password }` — returns success only; client stores password in `sessionStorage` |
 
-Admin mutating routes require header: `x-admin-password: <ADMIN_PASSWORD>`.
+Admin header: `x-admin-password: <ADMIN_PASSWORD>` (default env fallback `"change-me"`).
+
+**Auth gap:** Reorder / delete-history in the UI go through unauthenticated `POST /api/data`. Date shift/confirm and host/pass are also public. Fine for a trusted family URL today; harden before wider sharing (Track D).
 
 ---
 
@@ -187,19 +236,20 @@ Admin mutating routes require header: `x-admin-password: <ADMIN_PASSWORD>`.
 
 **Tracker** (`TrackerData`):
 
-- `members[]`: `name`, `photo`, `status` (`""` \| `"Hosting"` \| `"Passed"`), `isCurrent`, `hostingDate`, `proposedDate`, `vote` (hosting RSVP, not process vote)
+- `members[]`: `name`, `photo`, `status` (`""` \| `"Hosting"` \| `"Passed"`), `isCurrent`, `hostingDate`, `proposedDate`, `dateConfirmed?`, `vote` (hosting RSVP, not process vote)
 - `history[]`: `{ name, date }` (ISO `YYYY-MM-DD` preferred)
 - `passStartIndex`, `currentRoundPassers`, `hostConfirmed`, `lastHostIndex`
+- `updatedAt?` — write stamp (ms) for client stale-poll handling
 - `scheduleProposal?`:
   - `title`, `summary`, `createdAt`, `deadlineAt`, `adopted`, `threshold` (0.7)
   - `responses[]`: parent process votes `{ firstName, vote }`
-  - `kidsResponses[]`: child process votes (temporary; remove after vote closes)
+  - `kidsResponses[]`: child process votes (temporary; remove after vote UI retired)
 
-**Kids** (`KidsData`): `kids[]` with `name`, `photo` (`/kids/Name.jpg`), `vote`
+**Kids** (`KidsData`): `kids[]` with `name`, `photo` (`/kids/Name.jpg`), `vote`; optional `updatedAt`
 
-**Date hosted column:** `src/hosting.ts` → current `hostingDate` if Hosting, else first matching history entry.
+**Date hosted (Admin):** `src/hosting.ts` → current `hostingDate` if Hosting, else first matching history entry.
 
-**Adoption:** `yes / familySize > 0.7` (e.g. 8+ of 10 👍).
+**Adoption:** `yes / familySize > 0.7` (e.g. **8+ of 10** 👍). Kids tally does not set `adopted`.
 
 Seed members/photos: `netlify/functions/_shared/seed.ts` (adult ImgBB URLs; kids local `/kids/...`).
 
@@ -210,11 +260,11 @@ Seed members/photos: `netlify/functions/_shared/seed.ts` (adult ImgBB URLs; kids
 - Vibrant **green → yellow → red** gradient fading toward **bottom-right** (Wegene-inspired, but direction differs)
 - Hero title **“Kids Mahaber”**: Fraunces, **deep black** `#0a0f0c`
 - Body fonts: Outfit + Fraunces
-- Host / Pass buttons **centered** under current turn
-- Date hosted column **centered** in each member row
+- Host / Pass buttons **centered** under current turn (when shown)
 - Glass-style white cards over the colorful background
-- Process vote lives in **`ScheduleProposalPanel`** only — **not** in the schedule table columns
+- Process vote lives in **`ScheduleProposalPanel`** only — split into explanation / vote / tally cards
 - Proposal thumbs: **green** yes / **red** no, enlarged (~4.5rem)
+- Parents schedule: Member + Proposed date only (no date-hosted column)
 - Current turn Host/Pass currently **hidden** (`showCurrentTurn = false`)
 
 Main styles: `src/index.css`
@@ -225,18 +275,23 @@ Main styles: `src/index.css`
 
 - Repo initialized **inside** `kids-mahaber/` (not the parent folder)
 - Remote: `origin` → `https://github.com/jaklilu/Kids-Mahaber.git`
-- Branch: `main`
+- Branch: `main` (tracks `origin/main`)
+- Recent themes: proposal UX, kids process vote, vote-loss fixes, Blobs connectLambda, Frea Aug 15 lock
 - Ignored: `.env`, `data/`, `node_modules/`, `dist/`, `.netlify/`
 
 ---
 
 ## Important bugs / lessons already fixed
 
-1. **Frea showed July 20 without hosting** — leftover test host written into `history` during API testing. Member Reset only cleared status, not history. Fixed: removed bad history row; **Reset now also deletes that person’s history entries**.
+1. **Frea showed July 20 without hosting** — leftover test host in `history`. **Reset now also deletes that person’s history entries**.
 2. Port **8888** conflict → Netlify Dev on **8889**.
 3. Flask default port **5000** blocked on this Windows machine; old Flask was tested on **5050** (not required for the new app).
-4. Old `app.py` had a **hardcoded Gmail app password** — treat as compromised; never copy secrets into the new repo. Use env vars / Resend.
-5. Do not mix **process proposal thumbs** with **hosting Host/Pass** or **post-host RSVP** — separate card + first-name tally.
+4. Old `app.py` had a **hardcoded Gmail app password** — treat as compromised; never copy secrets into the new repo. Use env vars / Resend. **Revoke in Google Account if still active.**
+5. Do not mix **process proposal thumbs** with **hosting Host/Pass** or **post-host RSVP**.
+6. **Vote loss / GET rewrite races** — never persist on GET; merge on client save; `updatedAt` polling.
+7. **`/var/task/data` ENOENT** — never use local file store on Netlify/Lambda.
+8. **Missing Blobs env in Functions v1** — call `connectBlobs(event)` / `connectLambda` in the handler.
+9. **Frea Aug 8 vs Aug 15** — lock `FREA_FIRST_HOST_DATE`; auto-correct stored `2026-08-08`.
 
 ---
 
@@ -250,19 +305,27 @@ Main styles: `src/index.css`
 
 ## What is NOT done yet (next agent)
 
-Priority suggestions:
+**Immediate (product limbo — prefer Tracks A/B):**
 
-1. **Deploy to Netlify** from latest `main`; confirm Blobs + proposal card in production
-2. **Import live PythonAnywhere state** (current turn/history/votes) into Blobs so cutover keeps continuity
-3. **Optional member gate** (Wegene-style shared password before tracker) if family wants privacy
-4. **Email notifications** — wire Resend; update email body link from Wix URL to Netlify URL
-5. **SMS** — old app had `sms:` deep link (often commented out); not reimplemented
-6. **Adult/host photos** — still ImgBB; optional migrate to `public/` / Netlify CDN; compress huge local Adult PNGs if used
-7. **Custom domain** + retire Wix + PythonAnywhere
-8. **Delete** old `Kids Mahaber\` folder after cutover verified
-9. Harden admin (session token vs password-in-header; rate limiting)
-10. Concurrent write safety — Blobs OK for light family use; consider DB if expanding
-11. Optional: hide proposal thumbs after someone already voted under that first name (today API rejects duplicates)
+1. Decide process-vote outcome (re-open / force-adopt / archive UI)
+2. Resolve Frea’s slipped **2026-08-15** date; restore Host/Pass when ready (`showCurrentTurn = true`)
+3. Set `SHOW_KIDS_PROCESS_VOTE = false` (and optionally drop kidsResponses) once process vote is finished
+
+**Cutover & polish:**
+
+4. **Import live PythonAnywhere state** into Blobs if continuity still needed
+5. **Email** — wire Resend; Netlify URL (hyphenated); retire Wix link
+6. **SMS** — old `sms:` deep link not reimplemented
+7. **Adult photos** — still ImgBB; optional migrate to `public/`
+8. **Custom domain** + retire Wix + PythonAnywhere
+9. **Delete** old `Kids Mahaber\` folder after cutover verified
+
+**Hardening (Track D):**
+
+10. Optional **member gate** (shared password) before tracker
+11. Require admin (or member gate) for `POST /data`, date shift/confirm, host/pass as appropriate
+12. Admin session token vs password-in-header; rate limiting
+13. Concurrent write safety — OK for light family use; consider DB if expanding
 
 ---
 
@@ -270,22 +333,25 @@ Priority suggestions:
 
 | File | Why |
 |------|-----|
-| `src/App.tsx` | Tabs, polling, admin flows, host/pass + proposal name modal |
-| `src/components/TrackerPanel.tsx` | Current turn + proposal card + schedule table |
+| `src/App.tsx` | Tabs, polling, merge logic, admin flows, modals |
+| `src/components/TrackerPanel.tsx` | Current turn flag + proposal + schedule |
 | `src/components/ScheduleProposalPanel.tsx` | Process vote UI + tally |
-| `src/components/MemberRow.tsx` | Schedule row (no process-vote column) |
+| `src/components/MemberRow.tsx` | Proposed date, ±1 wk, Pls Confirm, RSVP |
 | `src/components/AdminPanel.tsx` | Admin UI |
-| `src/components/KidsPanel.tsx` | Kids RSVP |
-| `src/schedule.ts` | Proposed dates + proposal text/stats |
+| `src/components/KidsPanel.tsx` | Kids process vote flag + RSVP |
+| `src/schedule.ts` | Proposed dates + proposal text/stats (frontend) |
 | `src/hosting.ts` | Date hosted helpers |
 | `src/api.ts` | Frontend API client |
 | `src/index.css` | Full visual system |
 | `netlify/functions/api.ts` | All backend routes |
 | `netlify/functions/_shared/schedule.ts` | Backend schedule + proposal sync |
-| `netlify/functions/_shared/store.ts` | Blobs + local JSON |
+| `netlify/functions/_shared/store.ts` | Blobs + local JSON + connectBlobs |
 | `netlify/functions/_shared/seed.ts` | Default roster |
+| `netlify/functions/_shared/email.ts` | Optional Resend |
+| `vite.config.ts` | Vite + thin PWA (`vite-plugin-pwa`; NetworkOnly `/api`) |
+| `public/pwa-192.png` / `pwa-512.png` / `apple-touch-icon.png` | Install icons |
 | `netlify.toml` | Build, redirects, dev port 8889 |
-| `../Kids Mahaber/app.py` | Old API behavior reference |
+| `../Kids Mahaber/app.py` | Old API behavior reference (do not copy secrets) |
 | `../Kids Mahaber/newfielonWixKidsAdded.html` | Old UI/behavior reference |
 
 ---
@@ -308,14 +374,17 @@ Priority suggestions:
 cd kids-mahaber
 npm run dev
 # open http://localhost:8889
-# Admin password: change-me
-# Parents: proposal card (deadline + green/red thumbs) + schedule −1/+1 wk
+# Admin password: change-me (local .env)
+# Parents: proposal cards (likely Voting Closed) + schedule −1/+1 wk + Pls Confirm
 # Current turn Host/Pass hidden until showCurrentTurn = true
 # Children: process vote (SHOW_KIDS_PROCESS_VOTE) + Coming/not coming RSVP
-# Proposal: thumb → first name → Parents/Children tally; closed after Wed Jul 15 5pm PT
 curl http://localhost:8889/api/health
 curl http://localhost:8889/api/data
 curl http://localhost:8889/api/kids
+
+# Production smoke
+curl https://kids-mahaber.netlify.app/api/health
+# expect storage: "blobs"
 ```
 
 ---
@@ -324,4 +393,5 @@ curl http://localhost:8889/api/kids
 
 - Do **not** commit `.env` or copy Gmail credentials from old `app.py`
 - Rotate/revoke the exposed Gmail app password in Google Account if still active
-- Change `ADMIN_PASSWORD` before any public deploy
+- Change `ADMIN_PASSWORD` from default before relying on public Netlify URL for anything sensitive
+- Site + most mutating APIs are currently **world-reachable** without a member gate
