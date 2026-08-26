@@ -1,6 +1,6 @@
 # Kids Mahaber — Agent Handoff Context
 
-Last updated: 2026-08-25 (PWA shell added)
+Last updated: 2026-08-25 (PWA deployed; admin password rotated locally)
 
 Use this file to continue work without re-discovering the project.
 
@@ -49,7 +49,58 @@ c:\Kids Mahaber\
 | PythonAnywhere API | https://kidsmahaber-jaklilu.pythonanywhere.com/api | Old shared state — import then retire |
 | Design reference | https://wegene-family-mahaber.netlify.app/ | Color/vibe inspiration |
 
-**Prod health (verified 2026-08-25):** `GET /api/health` → `{ status: "ok", storage: "blobs" }`.
+**Prod health (verified 2026-08-25):** `GET /api/health` → `{ status: "ok", storage: "blobs" }`. PWA manifest + `sw.js` live after commit `f333f0c`.
+
+---
+
+## PWA (installable app)
+
+**Shipped 2026-08-25** — thin installable shell via `vite-plugin-pwa`. Not offline-first.
+
+### What it gives the family
+
+- Home-screen icon + name **“Mahaber”**
+- **Standalone** window (no browser URL bar on many devices)
+- Faster repeat loads (app shell precached ~280 KiB; kid photos **not** precached)
+- **`/api/*` is NetworkOnly** — votes and schedule always hit the live API
+
+### What it does *not* do (yet)
+
+- Offline use
+- Push notifications (deferred — see **Notifications** below)
+- One-click install on iPhone (Apple has no install API)
+
+### How to install (tell the family)
+
+| Device | Steps |
+|--------|--------|
+| **iPhone/iPad** | Safari → open site → **Share** → **Add to Home Screen** → **Add** |
+| **Android** | Chrome → **⋮** menu → **Install app** / **Add to Home screen** |
+| **Desktop Chrome** | Install icon in address bar (right side) |
+
+There is **no “Install” in the Safari URL bar** on iPhone — Share is required.
+
+### Dev vs preview gotcha
+
+| URL | Use |
+|-----|-----|
+| `http://localhost:8889` | **`npm run dev`** — full app + API (correct for testing data) |
+| `http://localhost:4173` | **`vite preview`** — static build only, **no API** → blank schedule |
+| `https://kids-mahaber.netlify.app/` | Production — install + full API |
+
+Service worker is **disabled during `npm run dev`** (`devOptions.enabled: false` in `vite.config.ts`) so local API debugging stays simple. SW runs on production build / Netlify deploy.
+
+### Future PWA polish (not built)
+
+- **Install helper UI:** “Install app” button on Android/desktop (`beforeinstallprompt`); iOS instruction sheet (Share → Add to Home Screen) — family asked for easier install for non-technical users
+- **Push notifications:** deferred; email (Resend) is the easier first notification channel
+
+### PWA files
+
+- `vite.config.ts` — manifest, workbox, NetworkOnly `/api`
+- `src/main.tsx` — `registerSW()`
+- `public/pwa-192.png`, `pwa-512.png`, `apple-touch-icon.png`
+- `scripts/generate-pwa-icons.mjs` — regenerate icons from `public/favicon.svg`
 
 ---
 
@@ -79,7 +130,19 @@ Snapshot from live Blobs via `GET /api/data`:
 | **B. Post-Aug-15 ops** | Slip Frea’s date, mark hosted, or regenerate schedule from “now”? Restore Host/Pass? |
 | **C. Cutover** | Import PythonAnywhere state → Blobs; retire Wix/PA; delete old folder |
 | **D. Hardening** | Member gate; lock open mutating routes; admin session vs password header |
-| **E. Notifications** | Wire Resend; fix site URL in email; decide on SMS |
+| **E. Notifications** | Wire **Resend email** first (partially built); push/SMS later |
+
+---
+
+## Notifications (planned — not priority)
+
+| Channel | Status | Notes |
+|---------|--------|-------|
+| **Email** | Code exists (`_shared/email.ts`); needs `RESEND_API_KEY` + `EMAIL_TO` in Netlify | Triggers on new host; easiest win |
+| **Push (PWA)** | **Deferred** | Needs VAPID keys, subscribe API, Blobs for device tokens; iPhone requires home-screen install + Allow |
+| **SMS** | Not built | Old Wix app had `sms:` link idea |
+
+User preference (2026-08-25): revisit push **maybe later**; email first.
 
 ---
 
@@ -193,13 +256,19 @@ npm run typecheck
 ### Env (`.env` — gitignored)
 
 ```
-ADMIN_PASSWORD=change-me
+ADMIN_PASSWORD=<your-secret>   # local only; never commit
 USE_LOCAL_STORE=1
 ```
 
-Production (Netlify UI): set `ADMIN_PASSWORD`; optionally `RESEND_API_KEY`, `EMAIL_TO`, `EMAIL_FROM`.
+**Admin password (2026-08-25):**
 
-See `.env.example`.
+- Local `.env` was rotated to a family-chosen secret (not in git).
+- **Production:** set `ADMIN_PASSWORD` in Netlify → Site configuration → Environment variables, then redeploy. Until set, the API falls back to hardcoded **`change-me`** in `netlify/functions/api.ts` (`process.env.ADMIN_PASSWORD || "change-me"`) — that is why admin worked on Netlify with no env entry.
+- Client stores password in `sessionStorage` after Admin tab login.
+
+Production (Netlify UI): `ADMIN_PASSWORD` (required for real security); optionally `RESEND_API_KEY`, `EMAIL_TO`, `EMAIL_FROM`.
+
+See `.env.example` (still shows `change-me` as template only).
 
 Email helper fallback URL should be `https://kids-mahaber.netlify.app` (hyphen). Confirm `URL` / `DEPLOY_PRIME_URL` / hardcoded fallback in `_shared/email.ts` if enabling Resend.
 
@@ -276,7 +345,7 @@ Main styles: `src/index.css`
 - Repo initialized **inside** `kids-mahaber/` (not the parent folder)
 - Remote: `origin` → `https://github.com/jaklilu/Kids-Mahaber.git`
 - Branch: `main` (tracks `origin/main`)
-- Recent themes: proposal UX, kids process vote, vote-loss fixes, Blobs connectLambda, Frea Aug 15 lock
+- Recent themes: **PWA** (`f333f0c`), proposal UX, vote-loss fixes, Blobs connectLambda, Frea Aug 15 lock, admin password rotation (local)
 - Ignored: `.env`, `data/`, `node_modules/`, `dist/`, `.netlify/`
 
 ---
@@ -292,6 +361,8 @@ Main styles: `src/index.css`
 7. **`/var/task/data` ENOENT** — never use local file store on Netlify/Lambda.
 8. **Missing Blobs env in Functions v1** — call `connectBlobs(event)` / `connectLambda` in the handler.
 9. **Frea Aug 8 vs Aug 15** — lock `FREA_FIRST_HOST_DATE`; auto-correct stored `2026-08-08`.
+10. **Blank schedule on `vite preview`** — no Netlify functions; use `npm run dev` on **8889** or production URL.
+11. **Empty members on Parents tab** — `TrackerPanel` shows a hint if API data never loaded (preview-without-API case).
 
 ---
 
@@ -320,12 +391,18 @@ Main styles: `src/index.css`
 8. **Custom domain** + retire Wix + PythonAnywhere
 9. **Delete** old `Kids Mahaber\` folder after cutover verified
 
+**PWA & UX:**
+
+14. **Install helper banner** — Android/desktop install button + iOS Share instructions (discussed, not built)
+15. **Push notifications** — deferred
+
 **Hardening (Track D):**
 
-10. Optional **member gate** (shared password) before tracker
-11. Require admin (or member gate) for `POST /data`, date shift/confirm, host/pass as appropriate
-12. Admin session token vs password-in-header; rate limiting
-13. Concurrent write safety — OK for light family use; consider DB if expanding
+16. Optional **member gate** (shared password) before tracker
+17. Require admin (or member gate) for `POST /data`, date shift/confirm, host/pass as appropriate
+18. Admin session token vs password-in-header; rate limiting
+19. Set **`ADMIN_PASSWORD` in Netlify** (remove reliance on `change-me` fallback)
+20. Concurrent write safety — OK for light family use; consider DB if expanding
 
 ---
 
@@ -374,7 +451,7 @@ Main styles: `src/index.css`
 cd kids-mahaber
 npm run dev
 # open http://localhost:8889
-# Admin password: change-me (local .env)
+# Admin password: value in local .env (not committed)
 # Parents: proposal cards (likely Voting Closed) + schedule −1/+1 wk + Pls Confirm
 # Current turn Host/Pass hidden until showCurrentTurn = true
 # Children: process vote (SHOW_KIDS_PROCESS_VOTE) + Coming/not coming RSVP
@@ -385,6 +462,7 @@ curl http://localhost:8889/api/kids
 # Production smoke
 curl https://kids-mahaber.netlify.app/api/health
 # expect storage: "blobs"
+# Production admin: Netlify UI → Site → Environment variables → ADMIN_PASSWORD
 ```
 
 ---
@@ -393,5 +471,5 @@ curl https://kids-mahaber.netlify.app/api/health
 
 - Do **not** commit `.env` or copy Gmail credentials from old `app.py`
 - Rotate/revoke the exposed Gmail app password in Google Account if still active
-- Change `ADMIN_PASSWORD` from default before relying on public Netlify URL for anything sensitive
+- Change `ADMIN_PASSWORD` in Netlify env — **do not rely on code fallback `change-me`**
 - Site + most mutating APIs are currently **world-reachable** without a member gate
